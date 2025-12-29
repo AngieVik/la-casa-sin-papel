@@ -23,9 +23,9 @@ const UIGameMaster: React.FC = () => {
   
   // Store actions
   const tickerText = useStore((state) => state.room.tickerText);
-  const setTickerText = useStore((state) => state.setTickerText);
+  const gmUpdateTicker = useStore((state) => state.gmUpdateTicker);
   const gameClock = useStore((state) => state.room.gameClock);
-  const updateClock = useStore((state) => state.updateClock);
+  const gmUpdateClock = useStore((state) => state.gmUpdateClock);
   const setCurrentView = useStore((state) => state.setCurrentView);
   const setNickname = useStore((state) => state.setNickname);
   const setGM = useStore((state) => state.setGM);
@@ -39,12 +39,12 @@ const UIGameMaster: React.FC = () => {
       setNickname('');
       setGM(false);
       setCurrentView('login');
-      setTickerText('Bienvenido a la partida...');
+      // Ticker reset intentionally omitted to avoid global change on local logout
     }
   };
 
   const handleTickerUpdate = () => {
-    setTickerText(localTicker);
+    gmUpdateTicker(localTicker);
   };
 
   return (
@@ -177,7 +177,7 @@ const UIGameMaster: React.FC = () => {
               </label>
               <div className="flex items-center gap-4 bg-neutral-950 p-4 rounded-xl border border-neutral-800 w-fit">
                 <button 
-                  onClick={() => updateClock('00:00')}
+                  onClick={() => gmUpdateClock('00:00')}
                   className="text-xs text-neutral-500 hover:text-white px-2 py-1 bg-neutral-900 rounded border border-neutral-800"
                 >
                   Reset
@@ -185,7 +185,7 @@ const UIGameMaster: React.FC = () => {
                 <input 
                   type="time" 
                   value={gameClock}
-                  onChange={(e) => updateClock(e.target.value)}
+                  onChange={(e) => gmUpdateClock(e.target.value)}
                   className="bg-transparent text-3xl font-mono font-bold text-green-500 focus:outline-none"
                 />
               </div>

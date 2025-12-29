@@ -6,12 +6,10 @@ const DashboardView: React.FC = () => {
   const isGM = useStore((state) => state.user.isGM);
   const setCurrentView = useStore((state) => state.setCurrentView);
   const setNickname = useStore((state) => state.setNickname);
-  const setTickerText = useStore((state) => state.setTickerText);
 
   const handleLogout = () => {
       setNickname('');
       setCurrentView('login');
-      setTickerText('Bienvenido a la partida... Identifícate para continuar.');
   };
 
   return (

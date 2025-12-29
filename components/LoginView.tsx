@@ -1,42 +1,35 @@
 import React, { useState } from 'react';
-import { User, Lock, ArrowRight, ShieldAlert, Terminal } from 'lucide-react';
+import { User, Lock, ArrowRight, ShieldAlert, Terminal, Loader2 } from 'lucide-react';
 import { useStore } from '../store';
 
 const LoginView: React.FC = () => {
   const [localNick, setLocalNick] = useState('');
   const [isGMMode, setIsGMMode] = useState(false);
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [localError, setLocalError] = useState('');
 
-  const setNickname = useStore((state) => state.setNickname);
-  const setGM = useStore((state) => state.setGM);
-  const setCurrentView = useStore((state) => state.setCurrentView);
-  const setTickerText = useStore((state) => state.setTickerText);
+  // Store
+  const loginToFirebase = useStore((state) => state.loginToFirebase);
+  const isLoading = useStore((state) => state.ui.isLoading);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setLocalError('');
 
     if (!localNick.trim()) {
-      setError('Identificación requerida.');
+      setLocalError('Identificación requerida.');
       return;
     }
 
     if (isGMMode) {
       if (password === '1010') {
-        setNickname(localNick);
-        setGM(true);
-        setCurrentView('gm');
-        setTickerText('Protocolo GM Activado. Control total concedido.');
+        await loginToFirebase(localNick, true);
       } else {
-        setError('Código de acceso denegado.');
+        setLocalError('Código de acceso denegado.');
         return;
       }
     } else {
-      setNickname(localNick);
-      setGM(false);
-      setCurrentView('patio');
-      setTickerText(`Agente ${localNick} conectado. Esperando instrucciones.`);
+      await loginToFirebase(localNick, false);
     }
   };
 
@@ -73,6 +66,7 @@ const LoginView: React.FC = () => {
                         value={localNick}
                         onChange={(e) => setLocalNick(e.target.value)}
                         placeholder="Introduce tu alias..."
+                        disabled={isLoading}
                         className="w-full bg-neutral-950 border border-neutral-700 text-white pl-12 pr-4 py-4 rounded-xl focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all placeholder:text-neutral-700 font-mono"
                     />
                 </div>
@@ -88,6 +82,7 @@ const LoginView: React.FC = () => {
                         type="checkbox" 
                         checked={isGMMode}
                         onChange={(e) => setIsGMMode(e.target.checked)}
+                        disabled={isLoading}
                         className="hidden"
                     />
                     <span className={`text-sm font-medium transition-colors ${isGMMode ? 'text-red-400' : 'text-neutral-400 group-hover/check:text-neutral-300'}`}>
@@ -110,6 +105,7 @@ const LoginView: React.FC = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="••••"
                             maxLength={4}
+                            disabled={isLoading}
                             className="w-full bg-neutral-950 border border-red-900/30 text-red-100 pl-12 pr-4 py-4 rounded-xl focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all placeholder:text-red-900/20 font-mono tracking-widest"
                         />
                     </div>
@@ -117,31 +113,36 @@ const LoginView: React.FC = () => {
             )}
 
             {/* Error Message */}
-            {error && (
+            {localError && (
                 <div className="p-3 bg-red-950/30 border border-red-900/50 rounded-lg text-red-400 text-sm flex items-center justify-center gap-2 animate-pulse">
                     <ShieldAlert size={16} />
-                    {error}
+                    {localError}
                 </div>
             )}
 
             {/* Submit Button */}
             <button 
                 type="submit"
+                disabled={isLoading}
                 className={`w-full py-4 rounded-xl font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all transform active:scale-95 shadow-lg
+                    ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}
                     ${isGMMode 
                         ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-900/20' 
                         : 'bg-green-600 hover:bg-green-500 text-neutral-950 shadow-green-900/20'
                     }`}
             >
-                {isGMMode ? 'Autenticar' : 'Ingresar'} <ArrowRight size={20} />
+                {isLoading ? (
+                  <>
+                    <Loader2 className="animate-spin" size={20} /> Conectando...
+                  </>
+                ) : (
+                  <>
+                    {isGMMode ? 'Autenticar' : 'Ingresar'} <ArrowRight size={20} />
+                  </>
+                )}
             </button>
         </div>
       </form>
-
-      <p className="mt-8 text-neutral-600 text-xs text-center max-w-xs leading-relaxed">
-        AVISO: El uso no autorizado de este sistema resultará en la activación inmediata del protocolo de contención.
-      </p>
-
     </div>
   );
 };
