@@ -8,12 +8,6 @@ import { useStore } from "./store";
 
 const App: React.FC = () => {
   const currentView = useStore((state) => state.ui.currentView);
-  const subscribeToRoom = useStore((state) => state.subscribeToRoom);
-
-  // Initialize Realtime DB Listeners once
-  useEffect(() => {
-    subscribeToRoom();
-  }, [subscribeToRoom]);
 
   return (
     <MainLayout>
