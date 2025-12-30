@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { AppStore, Player, ChatMessage, ClockMode } from "./types";
+import { AppStore, Player, ChatMessage } from "./types";
 import { db, auth } from "./firebaseConfig";
 import {
   ref,
@@ -8,8 +8,9 @@ import {
   onValue,
   update,
   remove,
+  get as firebaseGet,
 } from "firebase/database";
-import { signInAnonymously } from "firebase/auth";
+import { signInAnonymously, onAuthStateChanged } from "firebase/auth";
 
 const ROOM_REF = "rooms/defaultRoom";
 
@@ -27,8 +28,12 @@ export const useStore = create<AppStore>((set, get) => ({
     votes: {},
     globalState: "Día 1: Planificación",
     tickerText: "Esperando conexión...",
-    gameClock: "00:00",
-    clockMode: "static",
+    clockConfig: {
+      mode: "static" as const,
+      startTime: null,
+      pausedAt: null,
+      duration: 0,
+    },
     tickerSpeed: 20,
     channels: { global: [] },
   },
@@ -55,6 +60,97 @@ export const useStore = create<AppStore>((set, get) => ({
 
   setActiveChannel: (channel) =>
     set((state) => ({ ui: { ...state.ui, activeChannel: channel } })),
+
+  // --- Firebase: Auth Persistence ---
+  restoreAuthSession: () => {
+    return new Promise<void>((resolve) => {
+      set((state) => ({ ui: { ...state.ui, isLoading: true } }));
+
+      onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          try {
+            // Usuario ya logueado, recuperar datos de Firebase Database
+            const uid = firebaseUser.uid;
+            const playerRef = ref(db, `${ROOM_REF}/players/${uid}`);
+            const snapshot = await firebaseGet(playerRef);
+
+            if (snapshot.exists()) {
+              const playerData = snapshot.val();
+
+              // Actualizar estado a 'online'
+              await update(playerRef, { status: "online" });
+
+              // Restaurar estado del store
+              set({
+                user: {
+                  nickname: playerData.nickname,
+                  isGM: playerData.isGM,
+                  id: uid,
+                },
+                ui: {
+                  isChatOpen: false,
+                  isSync: false,
+                  currentView: playerData.isGM ? "gm" : "patio",
+                  isLoading: false,
+                  error: null,
+                  activeChannel: "global",
+                },
+              });
+
+              // Si es GM, limpiar jugadores antiguos
+              if (playerData.isGM) {
+                get().cleanupOldPlayers();
+              }
+            } else {
+              // El usuario existe en Auth pero no en Database, forzar re-login
+              set((state) => ({
+                ui: { ...state.ui, currentView: "login", isLoading: false },
+              }));
+            }
+          } catch (error) {
+            console.error("Error restoring session:", error);
+            set((state) => ({
+              ui: { ...state.ui, currentView: "login", isLoading: false },
+            }));
+          }
+        } else {
+          // No hay usuario logueado
+          set((state) => ({
+            ui: { ...state.ui, currentView: "login", isLoading: false },
+          }));
+        }
+        resolve();
+      });
+    });
+  },
+
+  // --- Cleanup: Remove old offline players ---
+  cleanupOldPlayers: async () => {
+    try {
+      const playersRef = ref(db, `${ROOM_REF}/players`);
+      const snapshot = await firebaseGet(playersRef);
+
+      if (snapshot.exists()) {
+        const players = snapshot.val();
+        const oneHourAgo = Date.now() - 60 * 60 * 1000;
+
+        Object.entries(players).forEach(
+          async ([playerId, playerData]: [string, any]) => {
+            // No borrar GMs y solo borrar si llevan offline más de 1 hora
+            if (!playerData.isGM && playerData.status === "offline") {
+              const lastSeen = playerData.lastSeen || 0;
+              if (lastSeen < oneHourAgo) {
+                console.log(`Removing old player: ${playerData.nickname}`);
+                await remove(ref(db, `${ROOM_REF}/players/${playerId}`));
+              }
+            }
+          }
+        );
+      }
+    } catch (error) {
+      console.error("Error cleaning up old players:", error);
+    }
+  },
 
   // --- Firebase: Login ---
   loginToFirebase: async (nickname, isGM) => {
@@ -85,7 +181,13 @@ export const useStore = create<AppStore>((set, get) => ({
         role: isGM ? "Director" : "Agente",
         playerState: "",
         publicState: "",
+        lastSeen: Date.now(),
       });
+
+      // Si es GM, limpiar jugadores antiguos
+      if (isGM) {
+        get().cleanupOldPlayers();
+      }
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Error desconocido";
@@ -161,8 +263,12 @@ export const useStore = create<AppStore>((set, get) => ({
               ...state.room,
               status: newStatus,
               tickerText: data.ticker || "Sistema en línea.",
-              gameClock: data.clock || "00:00",
-              clockMode: data.clockMode || "static",
+              clockConfig: data.clockConfig || {
+                mode: "static" as const,
+                startTime: null,
+                pausedAt: null,
+                duration: 0,
+              },
               tickerSpeed: data.tickerSpeed || 20,
               globalState: data.globalState || "Esperando",
               players: playersList,
@@ -232,21 +338,72 @@ export const useStore = create<AppStore>((set, get) => ({
     await firebaseSet(votesRef, newVotes);
   },
 
-  // --- GM Actions ---
   gmUpdateTicker: (text) => {
     update(ref(db, ROOM_REF), { ticker: text });
-  },
-
-  gmUpdateClock: (time) => {
-    update(ref(db, ROOM_REF), { clock: time });
   },
 
   gmUpdateGlobalState: (state) => {
     update(ref(db, ROOM_REF), { globalState: state });
   },
 
-  gmSetClockMode: (mode: ClockMode) => {
-    update(ref(db, ROOM_REF), { clockMode: mode });
+  gmStartClock: () => {
+    const { room } = get();
+    const newConfig = {
+      ...room.clockConfig,
+      startTime: Date.now(),
+      pausedAt: null,
+    };
+    update(ref(db, ROOM_REF), { clockConfig: newConfig });
+  },
+
+  gmPauseClock: () => {
+    const { room } = get();
+    const config = room.clockConfig;
+
+    if (config.startTime === null) return; // Ya está pausado
+
+    const now = Date.now();
+    const elapsedSeconds = (now - config.startTime) / 1000;
+
+    let newDuration = config.duration;
+    if (config.mode === "countdown") {
+      newDuration = Math.max(0, config.duration - elapsedSeconds);
+    } else if (config.mode === "stopwatch") {
+      newDuration = config.duration + elapsedSeconds;
+    }
+
+    const newConfig = {
+      ...config,
+      startTime: null,
+      pausedAt: now,
+      duration: Math.floor(newDuration),
+    };
+
+    update(ref(db, ROOM_REF), { clockConfig: newConfig });
+  },
+
+  gmResetClock: (mode, initialDuration = 0) => {
+    const newConfig = {
+      mode,
+      startTime: null,
+      pausedAt: null,
+      duration: initialDuration,
+    };
+    update(ref(db, ROOM_REF), { clockConfig: newConfig });
+  },
+
+  gmSetStaticTime: (timeString: string) => {
+    // Convert HH:MM to seconds
+    const [hours, minutes] = timeString.split(":").map(Number);
+    const totalSeconds = (hours * 60 + minutes) * 60;
+
+    const { room } = get();
+    const newConfig = {
+      ...room.clockConfig,
+      mode: "static" as const,
+      duration: totalSeconds,
+    };
+    update(ref(db, ROOM_REF), { clockConfig: newConfig });
   },
 
   gmSetTickerSpeed: (speed: number) => {
@@ -314,8 +471,12 @@ export const useStore = create<AppStore>((set, get) => ({
       status: "waiting",
       channels: null,
       votes: null,
-      clock: "00:00",
-      clockMode: "static",
+      clockConfig: {
+        mode: "static",
+        startTime: null,
+        pausedAt: null,
+        duration: 0,
+      },
       globalState: "Día 1: Planificación",
     };
 

@@ -12,6 +12,7 @@ import {
 import ModalWrapper from "./ModalWrapper";
 import { ref, update as firebaseUpdate } from "firebase/database";
 import { db } from "../firebaseConfig";
+import { useGameClock } from "../hooks/useGameClock";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -22,7 +23,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const subscribeToRoom = useStore((state) => state.subscribeToRoom);
   const toggleChat = useStore((state) => state.toggleChat);
   const nickname = useStore((state) => state.user.nickname);
-  const gameClock = useStore((state) => state.room.gameClock);
+  const clockConfig = useStore((state) => state.room.clockConfig);
   const tickerText = useStore((state) => state.room.tickerText);
   const isChatOpen = useStore((state) => state.ui.isChatOpen);
   const isSync = useStore((state) => state.ui.isSync);
@@ -32,14 +33,44 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const tickerSpeed = useStore((state) => state.room.tickerSpeed);
   const setActiveChannel = useStore((state) => state.setActiveChannel);
 
+  // Calculate clock time locally
+  const timeString = useGameClock(clockConfig);
+
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
   const [newNickname, setNewNickname] = React.useState(nickname);
   const [isEditingNickname, setIsEditingNickname] = React.useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
 
   // Sincronización única al montar el componente
   useEffect(() => {
     subscribeToRoom();
   }, [subscribeToRoom]);
+
+  // Update lastSeen timestamp periodically and handle cleanup
+  useEffect(() => {
+    if (!userId) return;
+
+    const playerRef = ref(db, `rooms/defaultRoom/players/${userId}`);
+
+    // Update lastSeen every 30 seconds
+    const heartbeat = setInterval(() => {
+      firebaseUpdate(playerRef, { lastSeen: Date.now() });
+    }, 30000);
+
+    // Mark as offline when component unmounts or user leaves
+    const handleBeforeUnload = () => {
+      firebaseUpdate(playerRef, { status: "offline", lastSeen: Date.now() });
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      clearInterval(heartbeat);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      // Mark as offline on cleanup
+      firebaseUpdate(playerRef, { status: "offline", lastSeen: Date.now() });
+    };
+  }, [userId]);
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans selection:bg-red-900 selection:text-white pb-20 md:pb-0">
@@ -55,7 +86,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             />
             <div className="flex items-center gap-2 text-2xl font-mono font-bold tracking-widest text-red-600">
               <Clock className="w-5 h-5" />
-              <span>{gameClock}</span>
+              <span>{timeString}</span>
             </div>
           </div>
           <button
@@ -68,10 +99,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
         {/* Fila 2: Ticker (Marquesina) */}
         <div className="bg-red-900/20 border-t border-red-900/30 overflow-hidden h-8 flex items-center">
+          <style>
+            {`
+              @keyframes marquee {
+                0% { transform: translateX(100%); }
+                100% { transform: translateX(-100%); }
+              }
+              .animate-marquee {
+                animation: marquee linear infinite;
+              }
+            `}
+          </style>
           <div
-            className="whitespace-nowrap text-xs font-mono text-red-400 px-4 uppercase tracking-widest"
+            className="animate-marquee whitespace-nowrap text-xs font-mono text-red-400 px-4 uppercase tracking-widest"
             style={{
-              animation: `marquee ${tickerSpeed}s linear infinite`,
+              animationDuration: `${tickerSpeed}s`,
             }}
           >
             {tickerText}
@@ -190,14 +232,44 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
               <button
                 onClick={() => {
-                  // Logout logic: Simple reset for now as per task
-                  setCurrentView("login");
                   setIsUserMenuOpen(false);
+                  setShowLogoutConfirm(true);
                 }}
                 className="flex items-center gap-3 w-full p-4 bg-red-900/20 hover:bg-red-900/40 border border-red-900/30 rounded-xl transition-all group"
               >
                 <LogOut className="text-red-500 group-hover:translate-x-1 transition-transform" />
                 <span className="font-medium text-red-500">Cerrar Sesión</span>
+              </button>
+            </div>
+          </div>
+        </ModalWrapper>
+      )}
+
+      {/* LOGOUT CONFIRMATION MODAL */}
+      {showLogoutConfirm && (
+        <ModalWrapper
+          title="Confirmación"
+          onClose={() => setShowLogoutConfirm(false)}
+        >
+          <div className="space-y-6">
+            <p className="text-neutral-300 text-center text-lg">
+              ¿Seguro que quieres desconectarte?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setCurrentView("login");
+                  setShowLogoutConfirm(false);
+                }}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold transition-colors"
+              >
+                Sí, salir
+              </button>
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white px-6 py-3 rounded-lg font-bold transition-colors"
+              >
+                Cancelar
               </button>
             </div>
           </div>

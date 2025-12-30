@@ -18,6 +18,7 @@ export interface Player {
   role?: string;
   playerState?: string; // Estado privado (solo GM ve)
   publicState?: string; // Estado visible para todos
+  lastSeen?: number; // Timestamp de última actividad
 }
 
 export interface ChatMessage {
@@ -37,8 +38,12 @@ export interface RoomState {
   votes: Record<string, Record<string, boolean>>;
   globalState: string;
   tickerText: string;
-  gameClock: string;
-  clockMode: ClockMode;
+  clockConfig: {
+    mode: "static" | "countdown" | "stopwatch";
+    startTime: number | null; // Timestamp de cuando empezó/se reanudó
+    pausedAt: number | null; // Timestamp de cuando se pausó (para mantener el tiempo)
+    duration: number; // Duración total en segundos (para countdown) o tiempo acumulado (para stopwatch)
+  };
   tickerSpeed: number; // Velocidad en segundos del ciclo
   channels: Record<string, ChatMessage[]>; // { global: [], private_uid: [], room_name: [] }
 }
@@ -65,6 +70,8 @@ export interface AppStore {
   setActiveChannel: (channel: string) => void;
 
   // Async Firebase Actions
+  restoreAuthSession: () => Promise<void>;
+  cleanupOldPlayers: () => Promise<void>;
   loginToFirebase: (nickname: string, isGM: boolean) => Promise<void>;
   subscribeToRoom: () => void;
   sendChatMessage: (text: string, channel?: string) => Promise<void>;
@@ -73,11 +80,16 @@ export interface AppStore {
 
   // GM Actions
   gmUpdateTicker: (text: string) => void;
-  gmUpdateClock: (time: string) => void;
   gmUpdateGlobalState: (state: string) => void;
   gmStartGame: (gameId: string) => Promise<void>;
   gmEndGame: () => Promise<void>;
-  gmSetClockMode: (mode: ClockMode) => void;
+  gmStartClock: () => void;
+  gmPauseClock: () => void;
+  gmResetClock: (
+    mode: "static" | "countdown" | "stopwatch",
+    initialDuration?: number
+  ) => void;
+  gmSetStaticTime: (timeString: string) => void;
   gmSetTickerSpeed: (speed: number) => void;
   gmKickPlayer: (playerId: string) => Promise<void>;
   gmRemovePlayer: (playerId: string) => Promise<void>;

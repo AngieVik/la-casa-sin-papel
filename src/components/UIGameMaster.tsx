@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { useStore } from "../store";
 import {
   Users,
@@ -25,9 +25,11 @@ import {
   MessageCircle,
   Gauge,
   PowerOff,
+  Pause,
+  RotateCcw,
 } from "lucide-react";
 import ModalWrapper from "./ModalWrapper";
-import { ClockMode } from "../types";
+import { useGameClock, formatTimeToHHMM } from "../hooks/useGameClock";
 
 type TabID = "control" | "narrative" | "actions";
 
@@ -36,19 +38,23 @@ const UIGameMaster: React.FC = () => {
 
   // Store data
   const tickerText = useStore((state) => state.room.tickerText);
-  const gameClock = useStore((state) => state.room.gameClock);
-  const clockMode = useStore((state) => state.room.clockMode);
+  const clockConfig = useStore((state) => state.room.clockConfig);
   const tickerSpeed = useStore((state) => state.room.tickerSpeed);
   const status = useStore((state) => state.room.status);
   const players = useStore((state) => state.room.players);
   const votes = useStore((state) => state.room.votes);
 
+  // Calculate clock time locally
+  const timeString = useGameClock(clockConfig);
+
   // Store actions
   const gmUpdateTicker = useStore((state) => state.gmUpdateTicker);
-  const gmUpdateClock = useStore((state) => state.gmUpdateClock);
   const gmStartGame = useStore((state) => state.gmStartGame);
   const gmEndGame = useStore((state) => state.gmEndGame);
-  const gmSetClockMode = useStore((state) => state.gmSetClockMode);
+  const gmStartClock = useStore((state) => state.gmStartClock);
+  const gmPauseClock = useStore((state) => state.gmPauseClock);
+  const gmResetClock = useStore((state) => state.gmResetClock);
+  const gmSetStaticTime = useStore((state) => state.gmSetStaticTime);
   const gmSetTickerSpeed = useStore((state) => state.gmSetTickerSpeed);
   const gmKickPlayer = useStore((state) => state.gmKickPlayer);
   const gmRemovePlayer = useStore((state) => state.gmRemovePlayer);
@@ -68,41 +74,7 @@ const UIGameMaster: React.FC = () => {
   const [playerStateInput, setPlayerStateInput] = useState("");
   const [publicStateInput, setPublicStateInput] = useState("");
   const [whisperText, setWhisperText] = useState("");
-
-  // Timer logic
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const [timerSeconds, setTimerSeconds] = useState(0);
-
-  useEffect(() => {
-    if (clockMode === "countdown" || clockMode === "stopwatch") {
-      if (timerRef.current) clearInterval(timerRef.current);
-
-      timerRef.current = setInterval(() => {
-        setTimerSeconds((prev) => {
-          let newSeconds = clockMode === "stopwatch" ? prev + 1 : prev - 1;
-          if (clockMode === "countdown" && newSeconds < 0) {
-            clearInterval(timerRef.current!);
-            newSeconds = 0;
-          }
-
-          const mins = Math.floor(Math.abs(newSeconds) / 60);
-          const secs = Math.abs(newSeconds) % 60;
-          const timeStr = `${String(mins).padStart(2, "0")}:${String(
-            secs
-          ).padStart(2, "0")}`;
-          gmUpdateClock(timeStr);
-
-          return newSeconds;
-        });
-      }, 1000);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
-    }
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [clockMode]);
+  const [showShutdownConfirm, setShowShutdownConfirm] = useState(false);
 
   const handleEndSession = async () => {
     if (
@@ -129,25 +101,6 @@ const UIGameMaster: React.FC = () => {
 
     if (confirm("¿INICIAR MISIÓN? Todos los operativos serán desplegados.")) {
       gmStartGame(winner);
-    }
-  };
-
-  const handleClockModeChange = (mode: ClockMode) => {
-    if (mode === "countdown") {
-      setTimerSeconds(countdownMinutes * 60);
-    } else if (mode === "stopwatch") {
-      setTimerSeconds(0);
-    }
-    gmSetClockMode(mode);
-  };
-
-  const handleResetRoom = async () => {
-    if (
-      confirm(
-        "¿REINICIAR SALA? Se borrarán chats, votos y estados. Conexiones se mantienen."
-      )
-    ) {
-      await gmResetRoom();
     }
   };
 
@@ -387,12 +340,19 @@ const UIGameMaster: React.FC = () => {
                 <Clock size={16} /> Reloj del Juego
               </label>
 
+              {/* Clock Display */}
+              <div className="flex items-center justify-center gap-4 bg-neutral-950 p-6 rounded-xl border border-neutral-800">
+                <span className="text-5xl font-mono font-bold text-green-500">
+                  {timeString}
+                </span>
+              </div>
+
               {/* Clock Mode Selector */}
-              <div className="flex gap-2 mb-4">
+              <div className="flex gap-2">
                 <button
-                  onClick={() => handleClockModeChange("static")}
+                  onClick={() => gmResetClock("static", 0)}
                   className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
-                    clockMode === "static"
+                    clockConfig.mode === "static"
                       ? "bg-blue-600 border-blue-500 text-white"
                       : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600"
                   }`}
@@ -400,9 +360,11 @@ const UIGameMaster: React.FC = () => {
                   <TimerOff size={16} /> Estático
                 </button>
                 <button
-                  onClick={() => handleClockModeChange("countdown")}
+                  onClick={() =>
+                    gmResetClock("countdown", countdownMinutes * 60)
+                  }
                   className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
-                    clockMode === "countdown"
+                    clockConfig.mode === "countdown"
                       ? "bg-orange-600 border-orange-500 text-white"
                       : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600"
                   }`}
@@ -410,9 +372,9 @@ const UIGameMaster: React.FC = () => {
                   <Hourglass size={16} /> Cuenta Atrás
                 </button>
                 <button
-                  onClick={() => handleClockModeChange("stopwatch")}
+                  onClick={() => gmResetClock("stopwatch", 0)}
                   className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
-                    clockMode === "stopwatch"
+                    clockConfig.mode === "stopwatch"
                       ? "bg-green-600 border-green-500 text-white"
                       : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600"
                   }`}
@@ -421,8 +383,9 @@ const UIGameMaster: React.FC = () => {
                 </button>
               </div>
 
-              {clockMode === "countdown" && (
-                <div className="flex items-center gap-2 mb-4">
+              {/* Countdown Settings */}
+              {clockConfig.mode === "countdown" && (
+                <div className="flex items-center gap-2">
                   <label className="text-xs text-neutral-500">Minutos:</label>
                   <input
                     type="number"
@@ -435,36 +398,64 @@ const UIGameMaster: React.FC = () => {
                     className="w-20 bg-neutral-950 border border-neutral-700 rounded px-2 py-1 text-white text-center"
                   />
                   <button
-                    onClick={() => {
-                      setTimerSeconds(countdownMinutes * 60);
-                      gmSetClockMode("countdown");
-                    }}
-                    className="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1 rounded text-sm"
+                    onClick={() =>
+                      gmResetClock("countdown", countdownMinutes * 60)
+                    }
+                    className="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1 rounded text-sm flex items-center gap-1"
                   >
-                    Reiniciar
+                    <RotateCcw size={14} /> Set
                   </button>
                 </div>
               )}
 
-              <div className="flex items-center gap-4 bg-neutral-950 p-4 rounded-xl border border-neutral-800 w-fit">
-                <button
-                  onClick={() => gmUpdateClock("00:00")}
-                  className="text-xs text-neutral-500 hover:text-white px-2 py-1 bg-neutral-900 rounded border border-neutral-800"
-                >
-                  Reset
-                </button>
-                {clockMode === "static" ? (
+              {/* Static Time Input */}
+              {clockConfig.mode === "static" && (
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-neutral-500">Hora:</label>
                   <input
                     type="time"
-                    value={gameClock}
-                    onChange={(e) => gmUpdateClock(e.target.value)}
-                    className="bg-transparent text-3xl font-mono font-bold text-green-500 focus:outline-none"
+                    value={formatTimeToHHMM(clockConfig.duration)}
+                    onChange={(e) => gmSetStaticTime(e.target.value)}
+                    className="bg-neutral-950 border border-neutral-700 rounded px-3 py-2 text-white font-mono"
                   />
-                ) : (
-                  <span className="text-3xl font-mono font-bold text-green-500">
-                    {gameClock}
-                  </span>
-                )}
+                </div>
+              )}
+
+              {/* Play/Pause Controls */}
+              <div className="flex gap-2">
+                <button
+                  onClick={gmStartClock}
+                  disabled={
+                    clockConfig.mode === "static" ||
+                    clockConfig.startTime !== null
+                  }
+                  className="flex-1 bg-green-600 hover:bg-green-500 disabled:bg-neutral-800 disabled:text-neutral-600 disabled:cursor-not-allowed text-white px-4 py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
+                >
+                  <Play size={18} fill="currentColor" /> Play
+                </button>
+                <button
+                  onClick={gmPauseClock}
+                  disabled={
+                    clockConfig.mode === "static" ||
+                    clockConfig.startTime === null
+                  }
+                  className="flex-1 bg-yellow-600 hover:bg-yellow-500 disabled:bg-neutral-800 disabled:text-neutral-600 disabled:cursor-not-allowed text-white px-4 py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
+                >
+                  <Pause size={18} /> Pause
+                </button>
+                <button
+                  onClick={() =>
+                    gmResetClock(
+                      clockConfig.mode,
+                      clockConfig.mode === "countdown"
+                        ? countdownMinutes * 60
+                        : 0
+                    )
+                  }
+                  className="bg-red-600 hover:bg-red-500 text-white px-4 py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
+                >
+                  <RotateCcw size={18} /> Reset
+                </button>
               </div>
             </div>
 
@@ -550,7 +541,7 @@ const UIGameMaster: React.FC = () => {
               </h4>
               <div className="flex gap-4 flex-wrap">
                 <button
-                  onClick={handleResetRoom}
+                  onClick={() => setShowShutdownConfirm(true)}
                   className="px-4 py-2 bg-red-900/20 text-red-400 border border-red-900/50 rounded-lg hover:bg-red-900 hover:text-white text-sm transition-colors flex items-center gap-2"
                 >
                   <PowerOff size={16} /> APAGAR (Reset Seguro)
@@ -650,6 +641,38 @@ const UIGameMaster: React.FC = () => {
                 className="flex items-center justify-center gap-2 p-3 bg-red-900/20 text-red-500 border border-red-900/50 rounded-lg hover:bg-red-900 hover:text-white text-sm transition-colors"
               >
                 <Ban size={16} /> Expulsar
+              </button>
+            </div>
+          </div>
+        </ModalWrapper>
+      )}
+
+      {/* SHUTDOWN CONFIRMATION MODAL */}
+      {showShutdownConfirm && (
+        <ModalWrapper
+          title="⚠️ Confirmación de Apagado"
+          onClose={() => setShowShutdownConfirm(false)}
+        >
+          <div className="space-y-6">
+            <p className="text-neutral-300 text-center text-lg">
+              ¿REINICIAR SALA? Se borrarán chats, votos y estados. Las
+              conexiones se mantienen.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  await gmResetRoom();
+                  setShowShutdownConfirm(false);
+                }}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold transition-colors"
+              >
+                Sí, reiniciar
+              </button>
+              <button
+                onClick={() => setShowShutdownConfirm(false)}
+                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white px-6 py-3 rounded-lg font-bold transition-colors"
+              >
+                Cancelar
               </button>
             </div>
           </div>

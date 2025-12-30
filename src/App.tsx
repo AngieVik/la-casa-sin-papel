@@ -8,6 +8,12 @@ import { useStore } from "./store";
 
 const App: React.FC = () => {
   const currentView = useStore((state) => state.ui.currentView);
+  const restoreAuthSession = useStore((state) => state.restoreAuthSession);
+
+  // Restore auth session on app mount
+  useEffect(() => {
+    restoreAuthSession();
+  }, [restoreAuthSession]);
 
   return (
     <MainLayout>
