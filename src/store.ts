@@ -1,7 +1,13 @@
 import { create } from "zustand";
 import { AppStore, Player, ChatMessage } from "./types";
 import { db, auth } from "./firebaseConfig";
-import { ref, set, push, onValue, update } from "firebase/database";
+import {
+  ref,
+  set as firebaseSet,
+  push,
+  onValue,
+  update,
+} from "firebase/database";
 import { signInAnonymously } from "firebase/auth";
 
 const ROOM_REF = "rooms/defaultRoom";
@@ -64,7 +70,7 @@ export const useStore = create<AppStore>((set, get) => ({
 
       // Write User to DB
       const playerRef = ref(db, `${ROOM_REF}/players/${uid}`);
-      await set(playerRef, {
+      await firebaseSet(playerRef, {
         nickname,
         isGM,
         status: "online",

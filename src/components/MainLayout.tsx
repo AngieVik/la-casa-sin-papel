@@ -1,84 +1,72 @@
-import React from "react";
-import { MessageSquare, Clock, User, X } from "lucide-react";
+import React, { useEffect } from "react";
 import { useStore } from "../store";
 import ChatModal from "./ChatModal";
+import { MessageCircle, Clock, Radio } from "lucide-react";
 
 interface MainLayoutProps {
   children: React.ReactNode;
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
-  // Extracting specific state slices for performance
-  const gameClock = useStore((state) => state.room.gameClock);
+  // Selectores optimizados para evitar re-renders innecesarios
+  const subscribeToRoom = useStore((state) => state.subscribeToRoom);
+  const toggleChat = useStore((state) => state.toggleChat);
   const nickname = useStore((state) => state.user.nickname);
+  const gameClock = useStore((state) => state.room.gameClock);
   const tickerText = useStore((state) => state.room.tickerText);
   const isChatOpen = useStore((state) => state.ui.isChatOpen);
-  const toggleChat = useStore((state) => state.toggleChat);
-  const subscribeToRoom = useStore((state) => state.subscribeToRoom);
+  const isSync = useStore((state) => state.ui.isSync);
 
-  // Initialize Realtime DB Listeners once
-  React.useEffect(() => {
+  // Sincronización única al montar el componente
+  useEffect(() => {
     subscribeToRoom();
   }, [subscribeToRoom]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-neutral-900 text-white font-sans overflow-hidden">
-      {/* --- HEADER --- */}
-      <header className="sticky top-0 z-40 bg-neutral-950 border-b border-neutral-800 shadow-lg">
-        {/* Row 1: Clock & Nickname */}
-        <div className="flex justify-between items-center px-4 py-3 h-14">
-          <div className="flex items-center space-x-2 text-green-400">
-            <Clock size={18} />
-            <span className="font-mono text-xl font-bold tracking-wider">
-              {gameClock}
-            </span>
-          </div>
-
-          <div className="flex items-center space-x-2 text-neutral-300">
-            <span className="font-medium text-sm uppercase tracking-wide">
-              {nickname || "Invitado"}
-            </span>
-            <div className="p-1.5 bg-neutral-800 rounded-full border border-neutral-700">
-              <User size={16} />
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans selection:bg-red-900 selection:text-white pb-20 md:pb-0">
+      {/* HEADER: 2 Filas */}
+      <header className="sticky top-0 z-40 bg-neutral-900/90 backdrop-blur-md border-b border-neutral-800 shadow-lg">
+        {/* Fila 1: Info Principal */}
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isSync ? "bg-green-500 animate-pulse" : "bg-red-500"
+              }`}
+            />
+            <div className="flex items-center gap-2 text-2xl font-mono font-bold tracking-widest text-red-600">
+              <Clock className="w-5 h-5" />
+              <span>{gameClock}</span>
             </div>
+          </div>
+          <div className="font-bold text-neutral-300 truncate max-w-[150px]">
+            {nickname || "Anónimo"}
           </div>
         </div>
 
-        {/* Row 2: Ticker (Marquee) */}
-        <div className="relative h-8 bg-neutral-900/90 border-t border-neutral-800 flex items-center overflow-hidden">
-          <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-neutral-900 to-transparent z-10 pointer-events-none"></div>
-          <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-neutral-900 to-transparent z-10 pointer-events-none"></div>
-
-          <div className="w-full whitespace-nowrap overflow-hidden">
-            <div className="animate-marquee inline-block text-xs font-mono text-yellow-500/90 tracking-widest uppercase">
-              {tickerText}
-            </div>
+        {/* Fila 2: Ticker (Marquesina) */}
+        <div className="bg-red-900/20 border-t border-red-900/30 overflow-hidden h-8 flex items-center">
+          <div className="whitespace-nowrap animate-marquee text-xs font-mono text-red-400 px-4 uppercase tracking-widest">
+            {tickerText}
           </div>
         </div>
       </header>
 
-      {/* --- MAIN CONTENT --- */}
-      <main className="flex-1 relative overflow-y-auto no-scrollbar p-4 md:p-6 pb-24">
+      {/* CONTENIDO PRINCIPAL */}
+      <main className="p-4 max-w-5xl mx-auto animate-in fade-in duration-500">
         {children}
       </main>
 
-      {/* --- CHAT FAB --- */}
-      {/* Only show FAB if chat is closed, otherwise the Modal handles closing */}
+      {/* CHAT FAB (Botón Flotante) */}
       <button
         onClick={toggleChat}
-        className={`fixed bottom-6 right-6 z-40 p-4 rounded-full shadow-2xl transition-all duration-300 ease-in-out
-          ${
-            isChatOpen
-              ? "opacity-0 pointer-events-none scale-0"
-              : "bg-green-600 hover:bg-green-500 hover:scale-105 opacity-100 scale-100"
-          }`}
-        aria-label="Open Chat"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 z-50 ring-4 ring-neutral-900"
       >
-        <MessageSquare size={24} className="text-white" />
+        <MessageCircle className="w-7 h-7" />
       </button>
 
-      {/* --- CHAT MODAL --- */}
-      <ChatModal />
+      {/* MODALES */}
+      {isChatOpen && <ChatModal />}
     </div>
   );
 };

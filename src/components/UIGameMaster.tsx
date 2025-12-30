@@ -183,7 +183,7 @@ const UIGameMaster: React.FC = () => {
                             : "bg-neutral-800 text-neutral-600 border border-neutral-700"
                         }`}
                       >
-                        <User size={18} />
+                        <Users size={18} />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
