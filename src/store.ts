@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { AppStore, Player, ChatMessage } from "./types";
+import { AppStore, Player, ChatMessage, ClockMode } from "./types";
 import { db, auth } from "./firebaseConfig";
 import {
   ref,
@@ -7,6 +7,7 @@ import {
   push,
   onValue,
   update,
+  remove,
 } from "firebase/database";
 import { signInAnonymously } from "firebase/auth";
 
@@ -27,6 +28,9 @@ export const useStore = create<AppStore>((set, get) => ({
     globalState: "Día 1: Planificación",
     tickerText: "Esperando conexión...",
     gameClock: "00:00",
+    clockMode: "static",
+    tickerSpeed: 20,
+    channels: { global: [] },
   },
   ui: {
     isChatOpen: false,
@@ -34,6 +38,7 @@ export const useStore = create<AppStore>((set, get) => ({
     currentView: "login",
     isLoading: false,
     error: null,
+    activeChannel: "global",
   },
 
   // --- UI Actions ---
@@ -48,6 +53,9 @@ export const useStore = create<AppStore>((set, get) => ({
 
   setGM: (isGM) => set((state) => ({ user: { ...state.user, isGM } })),
 
+  setActiveChannel: (channel) =>
+    set((state) => ({ ui: { ...state.ui, activeChannel: channel } })),
+
   // --- Firebase: Login ---
   loginToFirebase: async (nickname, isGM) => {
     set((state) => ({ ui: { ...state.ui, isLoading: true, error: null } }));
@@ -56,7 +64,6 @@ export const useStore = create<AppStore>((set, get) => ({
       const userCredential = await signInAnonymously(auth);
       const uid = userCredential.user.uid;
 
-      // Update local User State
       set({
         user: { nickname, isGM, id: uid },
         ui: {
@@ -65,10 +72,10 @@ export const useStore = create<AppStore>((set, get) => ({
           currentView: isGM ? "gm" : "patio",
           isLoading: false,
           error: null,
+          activeChannel: "global",
         },
       });
 
-      // Write User to DB
       const playerRef = ref(db, `${ROOM_REF}/players/${uid}`);
       await firebaseSet(playerRef, {
         nickname,
@@ -76,19 +83,23 @@ export const useStore = create<AppStore>((set, get) => ({
         status: "online",
         ready: false,
         role: isGM ? "Director" : "Agente",
+        playerState: "",
+        publicState: "",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Error desconocido";
       console.error("Login Error:", error);
       set((state) => ({
-        ui: { ...state.ui, isLoading: false, error: error.message },
+        ui: { ...state.ui, isLoading: false, error: errorMessage },
       }));
     }
   },
 
-  // --- Firebase: Realtime Sync (Listeners) ---
+  // --- Firebase: Realtime Sync ---
   subscribeToRoom: () => {
     const state = get();
-    if (state.ui.isSync) return; // Prevent double subscription
+    if (state.ui.isSync) return;
 
     const roomRef = ref(db, ROOM_REF);
 
@@ -96,30 +107,47 @@ export const useStore = create<AppStore>((set, get) => ({
       const data = snapshot.val();
 
       if (data) {
-        // 1. Parse Players Object to Array
         const playersList: Player[] = data.players
-          ? Object.entries(data.players).map(([key, val]: [string, any]) => ({
-              id: key,
-              ...val,
-            }))
+          ? Object.entries(data.players).map(
+              ([key, val]: [string, unknown]) => ({
+                id: key,
+                ...(val as Omit<Player, "id">),
+              })
+            )
           : [];
 
-        // 2. Parse Chat Object to Array
-        const messagesList: ChatMessage[] = data.chat
-          ? Object.entries(data.chat).map(([key, val]: [string, any]) => ({
+        // Parse channels
+        const channelsData: Record<string, ChatMessage[]> = {};
+        if (data.channels) {
+          Object.entries(data.channels).forEach(([channelName, messages]) => {
+            if (messages && typeof messages === "object") {
+              channelsData[channelName] = Object.entries(
+                messages as Record<string, unknown>
+              ).map(([key, val]: [string, unknown]) => ({
+                id: key,
+                ...(val as Omit<ChatMessage, "id">),
+              }));
+            }
+          });
+        }
+
+        // Legacy chat support -> migrate to global channel
+        const legacyMessages: ChatMessage[] = data.chat
+          ? Object.entries(data.chat).map(([key, val]: [string, unknown]) => ({
               id: key,
-              ...val,
+              ...(val as Omit<ChatMessage, "id">),
             }))
           : [];
+        if (legacyMessages.length > 0 && !channelsData.global) {
+          channelsData.global = legacyMessages;
+        }
 
-        // Update Store
         set((state) => {
           const newStatus = data.status || "waiting";
           const oldStatus = state.room.status;
           const isGM = state.user.isGM;
           let nextView = state.ui.currentView;
 
-          // Auto-Transition Logic for Players
           if (!isGM && oldStatus !== newStatus) {
             if (newStatus === "playing") {
               nextView = "player";
@@ -134,10 +162,13 @@ export const useStore = create<AppStore>((set, get) => ({
               status: newStatus,
               tickerText: data.ticker || "Sistema en línea.",
               gameClock: data.clock || "00:00",
+              clockMode: data.clockMode || "static",
+              tickerSpeed: data.tickerSpeed || 20,
               globalState: data.globalState || "Esperando",
               players: playersList,
-              messages: messagesList,
+              messages: channelsData.global || [],
               votes: data.votes || {},
+              channels: channelsData,
             },
             ui: {
               ...state.ui,
@@ -150,18 +181,18 @@ export const useStore = create<AppStore>((set, get) => ({
     });
   },
 
-  // --- Firebase: Writes ---
-
-  sendChatMessage: async (text) => {
+  // --- Firebase: Chat ---
+  sendChatMessage: async (text, channel = "global") => {
     const { user } = get();
     if (!user.id || !text.trim()) return;
 
-    const chatRef = ref(db, `${ROOM_REF}/chat`);
+    const chatRef = ref(db, `${ROOM_REF}/channels/${channel}`);
     await push(chatRef, {
       user: user.nickname,
       text,
       role: user.isGM ? "gm" : "player",
       timestamp: Date.now(),
+      channel,
     });
   },
 
@@ -174,16 +205,34 @@ export const useStore = create<AppStore>((set, get) => ({
   },
 
   voteForGame: async (gameId) => {
+    const { user, room } = get();
+    if (!user.id) return;
+
     const votesRef = ref(db, `${ROOM_REF}/votes`);
-    // Usamos update con un incremento atómico si fuera posible,
-    // pero para simplicidad aquí leemos el estado actual o usamos una estructura flat
-    const { room } = get();
-    const currentVotes = room.votes[gameId] || 0;
-    await update(votesRef, { [gameId]: currentVotes + 1 });
+    const newVotes = { ...room.votes };
+
+    Object.keys(newVotes).forEach((gId) => {
+      if (newVotes[gId] && newVotes[gId][user.id!]) {
+        const updatedGameVotes = { ...newVotes[gId] };
+        delete updatedGameVotes[user.id!];
+        newVotes[gId] = updatedGameVotes;
+      }
+    });
+
+    const currentGameVotes = { ...(room.votes[gameId] || {}) };
+    const hadVoted = !!currentGameVotes[user.id!];
+
+    if (hadVoted) {
+      delete currentGameVotes[user.id!];
+    } else {
+      currentGameVotes[user.id!] = true;
+    }
+
+    newVotes[gameId] = currentGameVotes;
+    await firebaseSet(votesRef, newVotes);
   },
 
-  // --- GM Actions (Direct Writes) ---
-
+  // --- GM Actions ---
   gmUpdateTicker: (text) => {
     update(ref(db, ROOM_REF), { ticker: text });
   },
@@ -196,6 +245,14 @@ export const useStore = create<AppStore>((set, get) => ({
     update(ref(db, ROOM_REF), { globalState: state });
   },
 
+  gmSetClockMode: (mode: ClockMode) => {
+    update(ref(db, ROOM_REF), { clockMode: mode });
+  },
+
+  gmSetTickerSpeed: (speed: number) => {
+    update(ref(db, ROOM_REF), { tickerSpeed: speed });
+  },
+
   gmStartGame: async (gameId) => {
     await update(ref(db, ROOM_REF), {
       status: "playing",
@@ -205,14 +262,67 @@ export const useStore = create<AppStore>((set, get) => ({
 
   gmEndGame: async () => {
     const { room } = get();
-    const updates: any = {
+    const updates: Record<string, unknown> = {
       status: "waiting",
-      chat: null, // Clear chat
+      channels: null,
     };
 
-    // Clear players ready status
     room.players.forEach((p) => {
       updates[`players/${p.id}/ready`] = false;
+    });
+
+    await update(ref(db, ROOM_REF), updates);
+  },
+
+  gmKickPlayer: async (playerId: string) => {
+    const playerRef = ref(db, `${ROOM_REF}/players/${playerId}`);
+    await update(playerRef, { ready: false });
+  },
+
+  gmRemovePlayer: async (playerId: string) => {
+    const playerRef = ref(db, `${ROOM_REF}/players/${playerId}`);
+    await remove(playerRef);
+  },
+
+  gmUpdatePlayerState: async (
+    playerId: string,
+    playerState: string,
+    publicState: string
+  ) => {
+    const playerRef = ref(db, `${ROOM_REF}/players/${playerId}`);
+    await update(playerRef, { playerState, publicState });
+  },
+
+  gmWhisper: async (playerId: string, text: string) => {
+    const { user } = get();
+    if (!user.id) return;
+
+    const channelName = `private_${playerId}`;
+    const chatRef = ref(db, `${ROOM_REF}/channels/${channelName}`);
+    await push(chatRef, {
+      user: user.nickname,
+      text,
+      role: "gm",
+      timestamp: Date.now(),
+      channel: channelName,
+    });
+  },
+
+  gmResetRoom: async () => {
+    const { room } = get();
+    const updates: Record<string, unknown> = {
+      status: "waiting",
+      channels: null,
+      votes: null,
+      clock: "00:00",
+      clockMode: "static",
+      globalState: "Día 1: Planificación",
+    };
+
+    room.players.forEach((p) => {
+      updates[`players/${p.id}/ready`] = false;
+      updates[`players/${p.id}/playerState`] = "";
+      updates[`players/${p.id}/publicState`] = "";
     });
 
     await update(ref(db, ROOM_REF), updates);

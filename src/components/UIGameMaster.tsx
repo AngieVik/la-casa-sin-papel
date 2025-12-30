@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useStore } from "../store";
 import {
   Users,
@@ -10,15 +10,24 @@ import {
   Volume2,
   MessageSquare,
   Edit2,
-  Ban,
   CheckCircle2,
-  XCircle,
   Clock,
   Type,
   Globe,
   Play,
   Square,
+  Timer,
+  TimerOff,
+  Hourglass,
+  UserX,
+  Ban,
+  Send,
+  MessageCircle,
+  Gauge,
+  PowerOff,
 } from "lucide-react";
+import ModalWrapper from "./ModalWrapper";
+import { ClockMode } from "../types";
 
 type TabID = "control" | "narrative" | "actions";
 
@@ -28,6 +37,8 @@ const UIGameMaster: React.FC = () => {
   // Store data
   const tickerText = useStore((state) => state.room.tickerText);
   const gameClock = useStore((state) => state.room.gameClock);
+  const clockMode = useStore((state) => state.room.clockMode);
+  const tickerSpeed = useStore((state) => state.room.tickerSpeed);
   const status = useStore((state) => state.room.status);
   const players = useStore((state) => state.room.players);
   const votes = useStore((state) => state.room.votes);
@@ -37,13 +48,61 @@ const UIGameMaster: React.FC = () => {
   const gmUpdateClock = useStore((state) => state.gmUpdateClock);
   const gmStartGame = useStore((state) => state.gmStartGame);
   const gmEndGame = useStore((state) => state.gmEndGame);
+  const gmSetClockMode = useStore((state) => state.gmSetClockMode);
+  const gmSetTickerSpeed = useStore((state) => state.gmSetTickerSpeed);
+  const gmKickPlayer = useStore((state) => state.gmKickPlayer);
+  const gmRemovePlayer = useStore((state) => state.gmRemovePlayer);
+  const gmUpdatePlayerState = useStore((state) => state.gmUpdatePlayerState);
+  const gmWhisper = useStore((state) => state.gmWhisper);
+  const gmResetRoom = useStore((state) => state.gmResetRoom);
+  const gmUpdateGlobalState = useStore((state) => state.gmUpdateGlobalState);
   const setCurrentView = useStore((state) => state.setCurrentView);
   const setNickname = useStore((state) => state.setNickname);
   const setGM = useStore((state) => state.setGM);
 
-  // Local state for inputs
+  // Local state
   const [localTicker, setLocalTicker] = useState(tickerText);
   const [globalState, setGlobalState] = useState("Día 1: Planificación");
+  const [countdownMinutes, setCountdownMinutes] = useState(5);
+  const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
+  const [playerStateInput, setPlayerStateInput] = useState("");
+  const [publicStateInput, setPublicStateInput] = useState("");
+  const [whisperText, setWhisperText] = useState("");
+
+  // Timer logic
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+
+  useEffect(() => {
+    if (clockMode === "countdown" || clockMode === "stopwatch") {
+      if (timerRef.current) clearInterval(timerRef.current);
+
+      timerRef.current = setInterval(() => {
+        setTimerSeconds((prev) => {
+          let newSeconds = clockMode === "stopwatch" ? prev + 1 : prev - 1;
+          if (clockMode === "countdown" && newSeconds < 0) {
+            clearInterval(timerRef.current!);
+            newSeconds = 0;
+          }
+
+          const mins = Math.floor(Math.abs(newSeconds) / 60);
+          const secs = Math.abs(newSeconds) % 60;
+          const timeStr = `${String(mins).padStart(2, "0")}:${String(
+            secs
+          ).padStart(2, "0")}`;
+          gmUpdateClock(timeStr);
+
+          return newSeconds;
+        });
+      }, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [clockMode]);
 
   const handleEndSession = async () => {
     if (
@@ -63,14 +122,65 @@ const UIGameMaster: React.FC = () => {
   };
 
   const handleStartGame = () => {
-    // Buscamos el juego más votado o usamos uno por defecto
-    const sortedGames = Object.entries(votes).sort((a, b) => b[1] - a[1]);
+    const sortedGames = Object.entries(votes).sort(
+      (a, b) => Object.keys(b[1] || {}).length - Object.keys(a[1] || {}).length
+    );
     const winner = sortedGames.length > 0 ? sortedGames[0][0] : "g1";
 
     if (confirm("¿INICIAR MISIÓN? Todos los operativos serán desplegados.")) {
       gmStartGame(winner);
     }
   };
+
+  const handleClockModeChange = (mode: ClockMode) => {
+    if (mode === "countdown") {
+      setTimerSeconds(countdownMinutes * 60);
+    } else if (mode === "stopwatch") {
+      setTimerSeconds(0);
+    }
+    gmSetClockMode(mode);
+  };
+
+  const handleResetRoom = async () => {
+    if (
+      confirm(
+        "¿REINICIAR SALA? Se borrarán chats, votos y estados. Conexiones se mantienen."
+      )
+    ) {
+      await gmResetRoom();
+    }
+  };
+
+  const openPlayerEdit = (playerId: string) => {
+    const player = players.find((p) => p.id === playerId);
+    if (player) {
+      setPlayerStateInput(player.playerState || "");
+      setPublicStateInput(player.publicState || "");
+      setWhisperText("");
+      setEditingPlayer(playerId);
+    }
+  };
+
+  const handleSavePlayerState = async () => {
+    if (editingPlayer) {
+      await gmUpdatePlayerState(
+        editingPlayer,
+        playerStateInput,
+        publicStateInput
+      );
+    }
+  };
+
+  const handleWhisper = async () => {
+    if (editingPlayer && whisperText.trim()) {
+      await gmWhisper(editingPlayer, whisperText);
+      setWhisperText("");
+    }
+  };
+
+  const editingPlayerData = editingPlayer
+    ? players.find((p) => p.id === editingPlayer)
+    : null;
 
   return (
     <div className="max-w-5xl mx-auto pb-24 animate-in fade-in duration-500">
@@ -163,7 +273,7 @@ const UIGameMaster: React.FC = () => {
           <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider">
-                Gestión de Operativos ({players.length})
+                Gestión de Operativos ({players.filter((p) => !p.isGM).length})
               </h3>
             </div>
 
@@ -202,17 +312,21 @@ const UIGameMaster: React.FC = () => {
                         <div className="text-xs text-neutral-500 font-mono uppercase tracking-widest">
                           {player.role || "Sin Rol"}
                         </div>
+                        {player.publicState && (
+                          <div className="text-xs text-blue-400 mt-1">
+                            {player.publicState}
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
-                      <button
-                        className="p-2 bg-neutral-800 rounded hover:text-blue-400 text-neutral-400 transition-colors"
-                        title="Editar Rol"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => openPlayerEdit(player.id)}
+                      className="p-2 bg-neutral-800 rounded hover:text-red-400 text-neutral-400 transition-colors"
+                      title="Editar Jugador"
+                    >
+                      <Edit2 size={16} />
+                    </button>
                   </div>
                 ))}
               {players.filter((p) => !p.isGM).length === 0 && (
@@ -230,7 +344,7 @@ const UIGameMaster: React.FC = () => {
             {/* Ticker Control */}
             <div className="space-y-4">
               <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
-                <Type size={16} /> Mensaje del Ticker (Marquesina)
+                <Type size={16} /> Mensaje del Ticker
               </label>
               <div className="flex gap-2">
                 <input
@@ -246,17 +360,92 @@ const UIGameMaster: React.FC = () => {
                   Publicar
                 </button>
               </div>
-              <p className="text-xs text-neutral-600">
-                Este mensaje aparecerá en la parte superior de todas las
-                pantallas.
-              </p>
+
+              {/* Ticker Speed Slider */}
+              <div className="mt-4">
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2 mb-2">
+                  <Gauge size={16} /> Velocidad del Ticker: {tickerSpeed}s
+                </label>
+                <input
+                  type="range"
+                  min="5"
+                  max="60"
+                  value={tickerSpeed}
+                  onChange={(e) => gmSetTickerSpeed(Number(e.target.value))}
+                  className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-red-500"
+                />
+                <div className="flex justify-between text-[10px] text-neutral-600">
+                  <span>Rápido</span>
+                  <span>Lento</span>
+                </div>
+              </div>
             </div>
 
             {/* Game Clock */}
             <div className="space-y-4">
               <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
-                <Clock size={16} /> Hora del Juego
+                <Clock size={16} /> Reloj del Juego
               </label>
+
+              {/* Clock Mode Selector */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => handleClockModeChange("static")}
+                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
+                    clockMode === "static"
+                      ? "bg-blue-600 border-blue-500 text-white"
+                      : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600"
+                  }`}
+                >
+                  <TimerOff size={16} /> Estático
+                </button>
+                <button
+                  onClick={() => handleClockModeChange("countdown")}
+                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
+                    clockMode === "countdown"
+                      ? "bg-orange-600 border-orange-500 text-white"
+                      : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600"
+                  }`}
+                >
+                  <Hourglass size={16} /> Cuenta Atrás
+                </button>
+                <button
+                  onClick={() => handleClockModeChange("stopwatch")}
+                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
+                    clockMode === "stopwatch"
+                      ? "bg-green-600 border-green-500 text-white"
+                      : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600"
+                  }`}
+                >
+                  <Timer size={16} /> Cronómetro
+                </button>
+              </div>
+
+              {clockMode === "countdown" && (
+                <div className="flex items-center gap-2 mb-4">
+                  <label className="text-xs text-neutral-500">Minutos:</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={120}
+                    value={countdownMinutes}
+                    onChange={(e) =>
+                      setCountdownMinutes(Number(e.target.value))
+                    }
+                    className="w-20 bg-neutral-950 border border-neutral-700 rounded px-2 py-1 text-white text-center"
+                  />
+                  <button
+                    onClick={() => {
+                      setTimerSeconds(countdownMinutes * 60);
+                      gmSetClockMode("countdown");
+                    }}
+                    className="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1 rounded text-sm"
+                  >
+                    Reiniciar
+                  </button>
+                </div>
+              )}
+
               <div className="flex items-center gap-4 bg-neutral-950 p-4 rounded-xl border border-neutral-800 w-fit">
                 <button
                   onClick={() => gmUpdateClock("00:00")}
@@ -264,12 +453,18 @@ const UIGameMaster: React.FC = () => {
                 >
                   Reset
                 </button>
-                <input
-                  type="time"
-                  value={gameClock}
-                  onChange={(e) => gmUpdateClock(e.target.value)}
-                  className="bg-transparent text-3xl font-mono font-bold text-green-500 focus:outline-none"
-                />
+                {clockMode === "static" ? (
+                  <input
+                    type="time"
+                    value={gameClock}
+                    onChange={(e) => gmUpdateClock(e.target.value)}
+                    className="bg-transparent text-3xl font-mono font-bold text-green-500 focus:outline-none"
+                  />
+                ) : (
+                  <span className="text-3xl font-mono font-bold text-green-500">
+                    {gameClock}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -290,13 +485,15 @@ const UIGameMaster: React.FC = () => {
                 ].map((state) => (
                   <button
                     key={state}
-                    onClick={() => setGlobalState(state)}
-                    className={`p-3 rounded-lg border text-sm font-medium transition-all
-                      ${
-                        globalState === state
-                          ? "bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.3)]"
-                          : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600"
-                      }`}
+                    onClick={() => {
+                      setGlobalState(state);
+                      gmUpdateGlobalState(state);
+                    }}
+                    className={`p-3 rounded-lg border text-sm font-medium transition-all ${
+                      globalState === state
+                        ? "bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.3)]"
+                        : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600"
+                    }`}
                   >
                     {state}
                   </button>
@@ -348,21 +545,116 @@ const UIGameMaster: React.FC = () => {
             </div>
 
             <div className="mt-8 p-4 bg-red-950/20 border border-red-900/30 rounded-xl">
-              <h4 className="text-red-500 font-bold mb-2 flex items-center gap-2">
+              <h4 className="text-red-500 font-bold mb-4 flex items-center gap-2">
                 <Settings size={16} /> Zona de Peligro
               </h4>
-              <div className="flex gap-4">
-                <button className="px-4 py-2 bg-red-900/20 text-red-400 border border-red-900/50 rounded-lg hover:bg-red-900 hover:text-white text-sm transition-colors">
-                  Reiniciar Ronda
-                </button>
-                <button className="px-4 py-2 bg-red-900/20 text-red-400 border border-red-900/50 rounded-lg hover:bg-red-900 hover:text-white text-sm transition-colors">
-                  Eliminar Todos
+              <div className="flex gap-4 flex-wrap">
+                <button
+                  onClick={handleResetRoom}
+                  className="px-4 py-2 bg-red-900/20 text-red-400 border border-red-900/50 rounded-lg hover:bg-red-900 hover:text-white text-sm transition-colors flex items-center gap-2"
+                >
+                  <PowerOff size={16} /> APAGAR (Reset Seguro)
                 </button>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Player Edit Modal */}
+      {editingPlayer && editingPlayerData && (
+        <ModalWrapper
+          title={`Editar: ${editingPlayerData.nickname}`}
+          onClose={() => setEditingPlayer(null)}
+        >
+          <div className="space-y-4">
+            {/* States */}
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-xs text-neutral-500 uppercase mb-1">
+                  Estado Privado (Solo GM)
+                </label>
+                <input
+                  type="text"
+                  value={playerStateInput}
+                  onChange={(e) => setPlayerStateInput(e.target.value)}
+                  placeholder="Ej: Tiene el código..."
+                  className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-neutral-500 uppercase mb-1">
+                  Estado Público (Visible)
+                </label>
+                <input
+                  type="text"
+                  value={publicStateInput}
+                  onChange={(e) => setPublicStateInput(e.target.value)}
+                  placeholder="Ej: Herido, Confuso..."
+                  className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm"
+                />
+              </div>
+              <button
+                onClick={handleSavePlayerState}
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg font-bold transition-colors"
+              >
+                Guardar Estados
+              </button>
+            </div>
+
+            {/* Whisper */}
+            <div className="border-t border-neutral-800 pt-4">
+              <label className="block text-xs text-neutral-500 uppercase mb-1">
+                <MessageCircle size={12} className="inline mr-1" /> Whisper
+                (Mensaje Privado)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={whisperText}
+                  onChange={(e) => setWhisperText(e.target.value)}
+                  placeholder="Mensaje privado..."
+                  className="flex-1 bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm"
+                />
+                <button
+                  onClick={handleWhisper}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg transition-colors"
+                >
+                  <Send size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="border-t border-neutral-800 pt-4 grid grid-cols-2 gap-2">
+              <button
+                onClick={async () => {
+                  await gmKickPlayer(editingPlayer);
+                  setEditingPlayer(null);
+                }}
+                className="flex items-center justify-center gap-2 p-3 bg-yellow-900/20 text-yellow-500 border border-yellow-900/50 rounded-lg hover:bg-yellow-900 hover:text-white text-sm transition-colors"
+              >
+                <UserX size={16} /> Kick (→ Patio)
+              </button>
+              <button
+                onClick={async () => {
+                  if (
+                    confirm(
+                      `¿Expulsar a ${editingPlayerData.nickname} permanentemente?`
+                    )
+                  ) {
+                    await gmRemovePlayer(editingPlayer);
+                    setEditingPlayer(null);
+                  }
+                }}
+                className="flex items-center justify-center gap-2 p-3 bg-red-900/20 text-red-500 border border-red-900/50 rounded-lg hover:bg-red-900 hover:text-white text-sm transition-colors"
+              >
+                <Ban size={16} /> Expulsar
+              </button>
+            </div>
+          </div>
+        </ModalWrapper>
+      )}
     </div>
   );
 };
