@@ -40,9 +40,9 @@ export interface RoomState {
   tickerText: string;
   clockConfig: {
     mode: "static" | "countdown" | "stopwatch";
-    startTime: number | null; // Timestamp de cuando empezó/se reanudó
-    pausedAt: number | null; // Timestamp de cuando se pausó (para mantener el tiempo)
-    duration: number; // Duración total en segundos (para countdown) o tiempo acumulado (para stopwatch)
+    baseTime: number; // Tiempo base en segundos (lo que se ve cuando está estático)
+    startTime: number | null; // Timestamp de cuando se dio a play
+    pausedAt: number | null; // Timestamp de cuando se pausó
   };
   tickerSpeed: number; // Velocidad en segundos del ciclo
   channels: Record<string, ChatMessage[]>; // { global: [], private_uid: [], room_name: [] }
@@ -83,12 +83,10 @@ export interface AppStore {
   gmUpdateGlobalState: (state: string) => void;
   gmStartGame: (gameId: string) => Promise<void>;
   gmEndGame: () => Promise<void>;
-  gmStartClock: () => void;
+  gmSetBaseTime: (seconds: number) => void;
+  gmStartClock: (mode: "countdown" | "stopwatch") => void;
   gmPauseClock: () => void;
-  gmResetClock: (
-    mode: "static" | "countdown" | "stopwatch",
-    initialDuration?: number
-  ) => void;
+  gmResetClock: () => void;
   gmSetStaticTime: (timeString: string) => void;
   gmSetTickerSpeed: (speed: number) => void;
   gmKickPlayer: (playerId: string) => Promise<void>;

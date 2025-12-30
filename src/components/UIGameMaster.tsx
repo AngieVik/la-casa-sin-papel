@@ -51,6 +51,7 @@ const UIGameMaster: React.FC = () => {
   const gmUpdateTicker = useStore((state) => state.gmUpdateTicker);
   const gmStartGame = useStore((state) => state.gmStartGame);
   const gmEndGame = useStore((state) => state.gmEndGame);
+  const gmSetBaseTime = useStore((state) => state.gmSetBaseTime);
   const gmStartClock = useStore((state) => state.gmStartClock);
   const gmPauseClock = useStore((state) => state.gmPauseClock);
   const gmResetClock = useStore((state) => state.gmResetClock);
@@ -360,9 +361,7 @@ const UIGameMaster: React.FC = () => {
                   <TimerOff size={16} /> Estático
                 </button>
                 <button
-                  onClick={() =>
-                    gmResetClock("countdown", countdownMinutes * 60)
-                  }
+                  onClick={() => gmSetBaseTime(countdownMinutes * 60)}
                   className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
                     clockConfig.mode === "countdown"
                       ? "bg-orange-600 border-orange-500 text-white"
@@ -372,7 +371,7 @@ const UIGameMaster: React.FC = () => {
                   <Hourglass size={16} /> Cuenta Atrás
                 </button>
                 <button
-                  onClick={() => gmResetClock("stopwatch", 0)}
+                  onClick={() => gmSetBaseTime(0)}
                   className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
                     clockConfig.mode === "stopwatch"
                       ? "bg-green-600 border-green-500 text-white"
@@ -398,9 +397,7 @@ const UIGameMaster: React.FC = () => {
                     className="w-20 bg-neutral-950 border border-neutral-700 rounded px-2 py-1 text-white text-center"
                   />
                   <button
-                    onClick={() =>
-                      gmResetClock("countdown", countdownMinutes * 60)
-                    }
+                    onClick={() => gmSetBaseTime(countdownMinutes * 60)}
                     className="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1 rounded text-sm flex items-center gap-1"
                   >
                     <RotateCcw size={14} /> Set
@@ -414,7 +411,7 @@ const UIGameMaster: React.FC = () => {
                   <label className="text-xs text-neutral-500">Hora:</label>
                   <input
                     type="time"
-                    value={formatTimeToHHMM(clockConfig.duration)}
+                    value={formatTimeToHHMM(clockConfig.baseTime)}
                     onChange={(e) => gmSetStaticTime(e.target.value)}
                     className="bg-neutral-950 border border-neutral-700 rounded px-3 py-2 text-white font-mono"
                   />
@@ -424,10 +421,17 @@ const UIGameMaster: React.FC = () => {
               {/* Play/Pause Controls */}
               <div className="flex gap-2">
                 <button
-                  onClick={gmStartClock}
+                  onClick={() =>
+                    gmStartClock(
+                      clockConfig.mode === "static"
+                        ? "stopwatch"
+                        : clockConfig.mode
+                    )
+                  }
                   disabled={
                     clockConfig.mode === "static" ||
-                    clockConfig.startTime !== null
+                    (clockConfig.startTime !== null &&
+                      clockConfig.pausedAt === null)
                   }
                   className="flex-1 bg-green-600 hover:bg-green-500 disabled:bg-neutral-800 disabled:text-neutral-600 disabled:cursor-not-allowed text-white px-4 py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
                 >
@@ -437,21 +441,15 @@ const UIGameMaster: React.FC = () => {
                   onClick={gmPauseClock}
                   disabled={
                     clockConfig.mode === "static" ||
-                    clockConfig.startTime === null
+                    clockConfig.startTime === null ||
+                    clockConfig.pausedAt !== null
                   }
                   className="flex-1 bg-yellow-600 hover:bg-yellow-500 disabled:bg-neutral-800 disabled:text-neutral-600 disabled:cursor-not-allowed text-white px-4 py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
                 >
                   <Pause size={18} /> Pause
                 </button>
                 <button
-                  onClick={() =>
-                    gmResetClock(
-                      clockConfig.mode,
-                      clockConfig.mode === "countdown"
-                        ? countdownMinutes * 60
-                        : 0
-                    )
-                  }
+                  onClick={gmResetClock}
                   className="bg-red-600 hover:bg-red-500 text-white px-4 py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
                 >
                   <RotateCcw size={18} /> Reset

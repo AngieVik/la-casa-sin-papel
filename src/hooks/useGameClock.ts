@@ -2,14 +2,14 @@ import { useState, useEffect } from "react";
 
 interface ClockConfig {
   mode: "static" | "countdown" | "stopwatch";
-  startTime: number | null;
-  pausedAt: number | null;
-  duration: number;
+  baseTime: number; // Tiempo base en segundos
+  startTime: number | null; // Timestamp de cuando se dio a play
+  pausedAt: number | null; // Timestamp de cuando se pausó
 }
 
 /**
  * Hook para calcular el tiempo del reloj en tiempo real sin actualizar Firebase constantemente.
- * Solo Firebase guarda la configuración, el cálculo se hace localmente.
+ * Funciona como un reloj de tablero deportivo.
  */
 export function useGameClock(config: ClockConfig): string {
   const [currentTime, setCurrentTime] = useState(() => calculateTime(config));
@@ -36,40 +36,39 @@ export function useGameClock(config: ClockConfig): string {
  * Calcula el tiempo actual basado en la configuración
  */
 function calculateTime(config: ClockConfig): string {
-  const { mode, startTime, pausedAt, duration } = config;
+  const { mode, baseTime, startTime, pausedAt } = config;
 
-  // Modo estático: simplemente muestra duration
+  // Modo estático: simplemente muestra baseTime
   if (mode === "static") {
-    return formatTime(duration);
+    return formatTime(baseTime);
   }
 
-  // Si está pausado (startTime es null pero pausedAt existe), mostrar tiempo congelado
-  if (startTime === null && pausedAt !== null) {
-    return formatTime(duration);
-  }
+  // Calcular tiempo transcurrido
+  let elapsedSeconds = 0;
 
-  // Si no ha iniciado aún
-  if (startTime === null) {
-    return formatTime(duration);
+  if (startTime !== null) {
+    if (pausedAt !== null) {
+      // Está pausado: usar el tiempo hasta la pausa
+      elapsedSeconds = (pausedAt - startTime) / 1000;
+    } else {
+      // Está corriendo: calcular desde startTime hasta ahora
+      elapsedSeconds = (Date.now() - startTime) / 1000;
+    }
   }
-
-  // Calcular tiempo transcurrido desde que empezó
-  const now = Date.now();
-  const elapsedSeconds = (now - startTime) / 1000;
 
   if (mode === "countdown") {
-    // Tiempo restante = duration - tiempo transcurrido
-    const remaining = Math.max(0, duration - elapsedSeconds);
+    // Cuenta atrás: baseTime - tiempo transcurrido (mínimo 0)
+    const remaining = Math.max(0, baseTime - elapsedSeconds);
     return formatTime(Math.floor(remaining));
   }
 
   if (mode === "stopwatch") {
-    // Tiempo acumulado = duration + tiempo transcurrido
-    const accumulated = duration + elapsedSeconds;
+    // Cronómetro: baseTime + tiempo transcurrido
+    const accumulated = baseTime + elapsedSeconds;
     return formatTime(Math.floor(accumulated));
   }
 
-  return formatTime(duration);
+  return formatTime(baseTime);
 }
 
 /**

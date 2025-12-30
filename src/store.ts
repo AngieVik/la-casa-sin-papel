@@ -30,9 +30,9 @@ export const useStore = create<AppStore>((set, get) => ({
     tickerText: "Esperando conexión...",
     clockConfig: {
       mode: "static" as const,
+      baseTime: 0,
       startTime: null,
       pausedAt: null,
-      duration: 0,
     },
     tickerSpeed: 20,
     channels: { global: [] },
@@ -346,13 +346,54 @@ export const useStore = create<AppStore>((set, get) => ({
     update(ref(db, ROOM_REF), { globalState: state });
   },
 
-  gmStartClock: () => {
-    const { room } = get();
+  // --- GM Clock Actions (Sports Scoreboard Logic) ---
+  gmSetBaseTime: (seconds) => {
     const newConfig = {
-      ...room.clockConfig,
-      startTime: Date.now(),
+      mode: "static" as const,
+      baseTime: seconds,
+      startTime: null,
       pausedAt: null,
     };
+    update(ref(db, ROOM_REF), { clockConfig: newConfig });
+  },
+
+  gmStartClock: (mode) => {
+    const { room } = get();
+    const config = room.clockConfig;
+
+    let newConfig;
+
+    if (config.startTime === null && config.pausedAt === null) {
+      // Primera vez: iniciar desde baseTime
+      newConfig = {
+        ...config,
+        mode,
+        startTime: Date.now(),
+        pausedAt: null,
+      };
+    } else if (config.pausedAt !== null) {
+      // Reanudar desde pausa: ajustar startTime para compensar el tiempo pausado
+      const pausedDuration = (config.pausedAt - config.startTime!) / 1000;
+
+      // Calcular el nuevo baseTime basado en el tiempo pausado
+      let newBaseTime = config.baseTime;
+      if (config.mode === "countdown") {
+        newBaseTime = Math.max(0, config.baseTime - pausedDuration);
+      } else if (config.mode === "stopwatch") {
+        newBaseTime = config.baseTime + pausedDuration;
+      }
+
+      newConfig = {
+        ...config,
+        baseTime: newBaseTime,
+        startTime: Date.now(),
+        pausedAt: null,
+      };
+    } else {
+      // Ya está corriendo, no hacer nada
+      return;
+    }
+
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
   },
 
@@ -362,32 +403,20 @@ export const useStore = create<AppStore>((set, get) => ({
 
     if (config.startTime === null) return; // Ya está pausado
 
-    const now = Date.now();
-    const elapsedSeconds = (now - config.startTime) / 1000;
-
-    let newDuration = config.duration;
-    if (config.mode === "countdown") {
-      newDuration = Math.max(0, config.duration - elapsedSeconds);
-    } else if (config.mode === "stopwatch") {
-      newDuration = config.duration + elapsedSeconds;
-    }
-
     const newConfig = {
       ...config,
-      startTime: null,
-      pausedAt: now,
-      duration: Math.floor(newDuration),
+      pausedAt: Date.now(),
     };
 
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
   },
 
-  gmResetClock: (mode, initialDuration = 0) => {
+  gmResetClock: () => {
+    const { room } = get();
     const newConfig = {
-      mode,
+      ...room.clockConfig,
       startTime: null,
       pausedAt: null,
-      duration: initialDuration,
     };
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
   },
@@ -397,11 +426,11 @@ export const useStore = create<AppStore>((set, get) => ({
     const [hours, minutes] = timeString.split(":").map(Number);
     const totalSeconds = (hours * 60 + minutes) * 60;
 
-    const { room } = get();
     const newConfig = {
-      ...room.clockConfig,
       mode: "static" as const,
-      duration: totalSeconds,
+      baseTime: totalSeconds,
+      startTime: null,
+      pausedAt: null,
     };
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
   },
@@ -473,9 +502,9 @@ export const useStore = create<AppStore>((set, get) => ({
       votes: null,
       clockConfig: {
         mode: "static",
+        baseTime: 0,
         startTime: null,
         pausedAt: null,
-        duration: 0,
       },
       globalState: "Día 1: Planificación",
     };
