@@ -234,9 +234,9 @@ const UIGameMaster: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto animate-in fade-in duration-500">
       {/* --- GM Header / Tabs --- */}
-      <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-2 border-b border-neutral-800 pb-4">
+      <div className="flex md:flex-row items-center justify-between mb-6 gap-2 border-b border-neutral-800 pb-4">
         <div>
-          <h2 className="text-2xl font-black text-white  tracking-tighter flex items-center gap-2">
+          <h2 className="text-xl md:text-2xl font-black text-white  tracking-tighter flex items-center gap-2">
             <Settings className="text-red-500 animate-spin-slow" size={24} />
             Interfaz GM
           </h2>
@@ -404,13 +404,13 @@ const UIGameMaster: React.FC = () => {
 
         {/* TAB: NARRATIVA */}
         {activeTab === "narrative" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-right-4 duration-300">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-right-4 duration-300">
             {/* GAME SELECTOR (Intercambiado) */}
             <div className="md:col-span-2 p-4 bg-neutral-950 border border-neutral-800 rounded-xl">
-              <h4 className="text-neutral-300 font-bold mb-4 flex items-center gap-2">
+              <h4 className="text-neutral-300 font-bold mb-2 flex items-center gap-2">
                 <BookOpen size={16} /> Selector de Juego
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-1">
                 {[
                   {
                     id: "juego1",
@@ -460,19 +460,17 @@ const UIGameMaster: React.FC = () => {
                           </p>
                         </div>
                         <div
-                          className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
+                          className={`flex items-center gap-1 p-1 rounded-full text-xs font-bold ${
                             gameVotes > 0
                               ? "bg-red-600 text-white"
                               : "bg-neutral-800 text-neutral-500"
                           }`}
                         >
-                          {gameVotes} votos
+                          {gameVotes}
                         </div>
                       </div>
                       {isSelected && (
-                        <div className="mt-2 text-xs text-green-500 font-mono uppercase">
-                          ✓ SELECCIONADO
-                        </div>
+                        <div className="mt-2 text-xs text-green-500 font-mono uppercase"></div>
                       )}
                     </button>
                   );
@@ -666,13 +664,13 @@ const UIGameMaster: React.FC = () => {
         {/* TAB: ACCIONES */}
         {activeTab === "actions" && (
           <div className="animate-in slide-in-from-right-4 duration-300">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-4 gap-1">
               {/* Global Message Button */}
               <button
                 onClick={() => setShowGlobalMessageModal(true)}
-                className="aspect-square bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-4 group hover:bg-neutral-800 hover:border-indigo-500 transition-all"
+                className="aspect-[2/1] bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-1 group hover:bg-neutral-800 hover:border-indigo-500 transition-all"
               >
-                <div className="p-4 bg-indigo-500/10 rounded-full group-hover:bg-indigo-500 text-indigo-500 group-hover:text-white transition-colors">
+                <div className="p-1 bg-indigo-500/10 rounded-full group-hover:bg-indigo-500 text-indigo-500 group-hover:text-white transition-colors">
                   <MessageSquare size={32} />
                 </div>
                 <span className="font-bold text-neutral-300 group-hover:text-white">
@@ -687,9 +685,9 @@ const UIGameMaster: React.FC = () => {
                     setShowGlobalSoundDropdown(!showGlobalSoundDropdown);
                     setShowGlobalVibrationDropdown(false);
                   }}
-                  className="aspect-square w-full bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-4 group hover:bg-neutral-800 hover:border-pink-500 transition-all"
+                  className="aspect-[2/1] w-full bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-1 group hover:bg-neutral-800 hover:border-pink-500 transition-all"
                 >
-                  <div className="p-4 bg-pink-500/10 rounded-full group-hover:bg-pink-500 text-pink-500 group-hover:text-white transition-colors">
+                  <div className="p-1 bg-pink-500/10 rounded-full group-hover:bg-pink-500 text-pink-500 group-hover:text-white transition-colors">
                     <Volume2 size={32} />
                   </div>
                   <span className="font-bold text-neutral-300 group-hover:text-white">
@@ -729,9 +727,9 @@ const UIGameMaster: React.FC = () => {
                     );
                     setShowGlobalSoundDropdown(false);
                   }}
-                  className="aspect-square w-full bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-4 group hover:bg-neutral-800 hover:border-orange-500 transition-all"
+                  className="aspect-[2/1] w-full bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-1 group hover:bg-neutral-800 hover:border-orange-500 transition-all"
                 >
-                  <div className="p-4 bg-orange-500/10 rounded-full group-hover:bg-orange-500 text-orange-500 group-hover:text-white transition-colors">
+                  <div className="p-1 bg-orange-500/10 rounded-full group-hover:bg-orange-500 text-orange-500 group-hover:text-white transition-colors">
                     <Zap size={32} />
                   </div>
                   <span className="font-bold text-neutral-300 group-hover:text-white">
@@ -747,7 +745,7 @@ const UIGameMaster: React.FC = () => {
                       }}
                       className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-orange-900/30 hover:text-orange-400 transition-colors"
                     >
-                      Débil (10ms) - Todos
+                      Débil
                     </button>
                     <button
                       onClick={() => {
@@ -756,7 +754,7 @@ const UIGameMaster: React.FC = () => {
                       }}
                       className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-orange-900/30 hover:text-orange-400 transition-colors"
                     >
-                      Media (100ms) - Todos
+                      Media
                     </button>
                     <button
                       onClick={() => {
@@ -765,7 +763,7 @@ const UIGameMaster: React.FC = () => {
                       }}
                       className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-orange-900/30 hover:text-orange-400 transition-colors"
                     >
-                      Fuerte (200ms) - Todos
+                      Fuerte
                     </button>
                   </div>
                 )}
@@ -774,9 +772,9 @@ const UIGameMaster: React.FC = () => {
               {/* Divine Voice Button */}
               <button
                 onClick={() => setShowGlobalDivineVoiceModal(true)}
-                className="aspect-square bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-4 group hover:bg-neutral-800 hover:border-blue-500 transition-all"
+                className="aspect-[2/1] bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-1 group hover:bg-neutral-800 hover:border-blue-500 transition-all"
               >
-                <div className="p-4 bg-blue-500/10 rounded-full group-hover:bg-blue-500 text-blue-500 group-hover:text-white transition-colors">
+                <div className="p-1 bg-blue-500/10 rounded-full group-hover:bg-blue-500 text-blue-500 group-hover:text-white transition-colors">
                   <Mic size={32} />
                 </div>
                 <span className="font-bold text-neutral-300 group-hover:text-white">
@@ -786,7 +784,7 @@ const UIGameMaster: React.FC = () => {
             </div>
 
             {/* Ticker & Clock configuration (Intercambiado) */}
-            <div className="mt-8 pt-8 border-t border-neutral-800 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="mt-4 pt-4 border-t border-neutral-800 grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Ticker Control */}
               <div className="space-y-4">
                 <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
@@ -801,7 +799,7 @@ const UIGameMaster: React.FC = () => {
                   />
                   <button
                     onClick={handleTickerUpdate}
-                    className="bg-yellow-600 hover:bg-yellow-500 text-black font-bold px-4 py-2 rounded-xl transition-colors"
+                    className="bg-yellow-600 hover:bg-yellow-500 text-black font-bold px-2 py-1 rounded-xl transition-colors"
                   >
                     Publicar
                   </button>
@@ -919,14 +917,14 @@ const UIGameMaster: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-8 p-4 bg-red-950/20 border border-red-900/30 rounded-xl">
+            <div className="mt-2 p-2 bg-red-950/20 border border-red-900/30 rounded-xl">
               <h4 className="text-red-500 font-bold mb-4 flex items-center gap-2">
                 <Settings size={16} /> Zona peligrosa
               </h4>
               <div className="flex gap-4 flex-wrap">
                 <button
                   onClick={() => setShowShutdownConfirm(true)}
-                  className="px-4 py-2 bg-red-900/20 text-red-400 border border-red-900/50 rounded-lg hover:bg-red-900 hover:text-white text-sm transition-colors flex items-center gap-2"
+                  className="px-2 py-1 bg-red-900/20 text-red-400 border border-red-900/50 rounded-lg hover:bg-red-900 hover:text-white text-sm transition-colors flex items-center gap-2"
                 >
                   <PowerOff size={16} /> SHUTDOWN (Reset Total)
                 </button>
