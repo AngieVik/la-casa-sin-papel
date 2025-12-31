@@ -348,6 +348,7 @@ export const useStore = create<AppStore>((set, get) => ({
 
   // --- GM Clock Actions (Sports Scoreboard Logic) ---
   gmSetBaseTime: (seconds) => {
+    // ESTA ACCIÓN ES DESTRUCTIVA: Reinicia el reloj con una nueva base
     const newConfig = {
       mode: "static" as const,
       baseTime: seconds,
@@ -364,7 +365,7 @@ export const useStore = create<AppStore>((set, get) => ({
     let newConfig;
 
     if (config.startTime === null && config.pausedAt === null) {
-      // Primera vez: iniciar desde baseTime
+      // Caso 1: Primera vez que arranca desde parado
       newConfig = {
         ...config,
         mode,
@@ -372,25 +373,33 @@ export const useStore = create<AppStore>((set, get) => ({
         pausedAt: null,
       };
     } else if (config.pausedAt !== null) {
-      // Reanudar desde pausa: ajustar startTime para compensar el tiempo pausado
-      const pausedDuration = (config.pausedAt - config.startTime!) / 1000;
+      // Caso 2: Reanudar desde pausa (RESUME)
+      // Calculamos cuánto tiempo "corrió" antes de la pausa
+      const previousRunTime = (config.pausedAt - config.startTime!) / 1000;
 
-      // Calcular el nuevo baseTime basado en el tiempo pausado
+      // Actualizamos el baseTime para "quemar" ese tiempo ya transcurrido
+      // y reiniciamos el startTime a AHORA. Esto evita deriva temporal.
       let newBaseTime = config.baseTime;
+      
+      // Si era cuenta atrás, el nuevo base es lo que quedaba
       if (config.mode === "countdown") {
-        newBaseTime = Math.max(0, config.baseTime - pausedDuration);
-      } else if (config.mode === "stopwatch") {
-        newBaseTime = config.baseTime + pausedDuration;
+        newBaseTime = Math.max(0, config.baseTime - previousRunTime);
+      } 
+      // Si era cronómetro, el nuevo base es lo que ya llevábamos acumulado
+      else if (config.mode === "stopwatch") {
+        newBaseTime = config.baseTime + previousRunTime;
       }
 
+      // IMPORTANTE: Al reanudar, cambiamos al modo solicitado (mode argument)
+      // Esto permite pausar una cuenta atrás y reanudarla como cronómetro si se quisiera
       newConfig = {
-        ...config,
+        mode: mode, // Usar el modo nuevo solicitado
         baseTime: newBaseTime,
-        startTime: Date.now(),
+        startTime: Date.now(), // Nuevo punto de partida
         pausedAt: null,
       };
     } else {
-      // Ya está corriendo, no hacer nada
+      // Ya está corriendo, no hacer nada para evitar reseteos accidentales
       return;
     }
 
@@ -401,7 +410,8 @@ export const useStore = create<AppStore>((set, get) => ({
     const { room } = get();
     const config = room.clockConfig;
 
-    if (config.startTime === null) return; // Ya está pausado
+    // Solo pausar si está corriendo (startTime existe y no está ya pausado)
+    if (config.startTime === null || config.pausedAt !== null) return;
 
     const newConfig = {
       ...config,
@@ -413,6 +423,7 @@ export const useStore = create<AppStore>((set, get) => ({
 
   gmResetClock: () => {
     const { room } = get();
+    // Resetea solo el estado de ejecución, manteniendo el baseTime actual (o el remanente)
     const newConfig = {
       ...room.clockConfig,
       startTime: null,
@@ -426,11 +437,13 @@ export const useStore = create<AppStore>((set, get) => ({
     const [minutes, seconds] = timeString.split(":").map(Number);
     const totalSeconds = minutes * 60 + seconds;
 
-    const { room } = get();
+    // FIX CRÍTICO: Al editar manualmente, forzamos un RESET COMPLETO del estado.
+    // Esto evita que se mezcle el tiempo nuevo con un 'startTime' antiguo.
     const newConfig = {
-      ...room.clockConfig,
+      mode: "static" as const,
       baseTime: totalSeconds,
-      // Mantener modo actual, NO forzar a 'static'
+      startTime: null, // Reset: el reloj se detiene
+      pausedAt: null,  // Reset: quitamos pausas antiguas
     };
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
   },
