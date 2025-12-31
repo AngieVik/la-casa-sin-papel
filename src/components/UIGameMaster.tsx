@@ -263,7 +263,7 @@ const UIGameMaster: React.FC = () => {
             }`}
           >
             <BookOpen size={16} />{" "}
-            <span className="hidden md:inline">Tools</span>
+            <span className="hidden md:inline">Narrativa</span>
           </button>
           <button
             onClick={() => setActiveTab("actions")}
@@ -387,132 +387,78 @@ const UIGameMaster: React.FC = () => {
         {/* TAB: NARRATIVA */}
         {activeTab === "narrative" && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-right-4 duration-300">
-            {/* Ticker Control */}
-            <div className="space-y-4">
-              <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
-                <Type size={16} /> Mensaje del Ticker
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={localTicker}
-                  onChange={(e) => setLocalTicker(e.target.value)}
-                  className="flex-1 bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-white font-mono text-sm focus:border-yellow-500 focus:outline-none transition-colors"
-                />
-                <button
-                  onClick={handleTickerUpdate}
-                  className="bg-yellow-600 hover:bg-yellow-500 text-black font-bold px-4 py-2 rounded-xl transition-colors"
-                >
-                  Publicar
-                </button>
-              </div>
-
-              {/* Ticker Speed Slider */}
-              <div className="mt-4">
-                <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2 mb-2">
-                  <Gauge size={16} /> Velocidad del Ticker: {tickerSpeed}s
-                </label>
-                <input
-                  type="range"
-                  min="5"
-                  max="60"
-                  value={tickerSpeed}
-                  onChange={(e) => gmSetTickerSpeed(Number(e.target.value))}
-                  className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-red-500"
-                />
-                <div className="flex justify-between text-[10px] text-neutral-600">
-                  <span>Rápido</span>
-                  <span>Lento</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Reloj del Juego */}
-            <div className="space-y-4">
-              <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
-                <Clock size={16} /> Reloj del Juego
-              </label>
-
-              {/* INPUT EDITABLE BLINDADO */}
-              <div className="bg-neutral-950 w-[150px] rounded-xl border border-neutral-800">
-                <input
-                  type="text"
-                  placeholder="00:00"
-                  value={localTime}
-                  onChange={handleTimeChange}
-                  onFocus={() => setIsEditingClock(true)}
-                  onBlur={handleClockBlur}
-                  className="text-3xl font-mono font-black text-green-500 bg-transparent text-center w-full focus:outline-none placeholder:text-green-900"
-                />
-              </div>
-
-              {/* BOTONES DE CONTROL - Grid 2 columnas */}
-              <div className="grid grid-cols-2 gap-1">
-                {/* TARJETA CUENTA ATRÁS */}
-                <button
-                  onClick={() => {
-                    if (
-                      clockConfig.mode === "countdown" &&
-                      clockConfig.isRunning
-                    ) {
-                      gmPauseClock();
-                    } else {
-                      gmStartClock("countdown");
-                    }
-                  }}
-                  className={`flex flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all hover:scale-105 ${
-                    clockConfig.mode === "countdown" && clockConfig.isRunning
-                      ? "bg-orange-900/30 border-orange-500 text-orange-400"
-                      : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-orange-600"
-                  }`}
-                >
-                  {clockConfig.mode === "countdown" && clockConfig.isRunning ? (
-                    <Pause size={25} className="text-orange-500" />
-                  ) : (
-                    <Play
-                      size={25}
-                      fill="currentColor"
-                      className="text-orange-500"
-                    />
-                  )}
-                  <div className="flex items-center gap-2">
-                    <Hourglass size={20} />
-                    <span className="font-bold text-sm">Cuenta Atrás</span>
-                  </div>
-                </button>
-
-                {/* TARJETA CRONÓMETRO */}
-                <button
-                  onClick={() => {
-                    if (
-                      clockConfig.mode === "stopwatch" &&
-                      clockConfig.isRunning
-                    ) {
-                      gmPauseClock();
-                    } else {
-                      gmStartClock("stopwatch");
-                    }
-                  }}
-                  className={`flex flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all hover:scale-105 ${
-                    clockConfig.mode === "stopwatch" && clockConfig.isRunning
-                      ? "bg-green-900/30 border-green-500 text-green-400"
-                      : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-green-600"
-                  }`}
-                >
-                  {clockConfig.mode === "stopwatch" && clockConfig.isRunning ? (
-                    <Pause size={25} className="text-green-500" />
-                  ) : (
-                    <Play
-                      size={25}
-                      fill="currentColor"
-                      className="text-green-500"
-                    />
-                  )}
-                  <div className="flex items-center gap-2">
-                    <Timer size={20} />
-                    <span className="font-bold text-sm">Cronómetro</span>
-                  </div>
-                </button>
+            {/* GAME SELECTOR (Intercambiado) */}
+            <div className="md:col-span-2 p-4 bg-neutral-950 border border-neutral-800 rounded-xl">
+              <h4 className="text-neutral-300 font-bold mb-4 flex items-center gap-2">
+                <BookOpen size={16} /> Selector de Juego
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[
+                  {
+                    id: "juego1",
+                    title: "Atraco al Banco",
+                    desc: "Gestión de recursos",
+                  },
+                  { id: "juego2", title: "El Topo", desc: "Roles ocultos" },
+                  {
+                    id: "juego3",
+                    title: "Protocolo Fantasma",
+                    desc: "Hackeo y sigilo",
+                  },
+                  {
+                    id: "juego4",
+                    title: "Motín en la Prisión",
+                    desc: "Control de áreas",
+                  },
+                  { id: "juego5", title: "La Fuga", desc: "Cooperativo" },
+                  { id: "juego6", title: "Negociación", desc: "Bluffing" },
+                ].map((game) => {
+                  const gameVotes = votes[game.id]
+                    ? Object.keys(votes[game.id]).length
+                    : 0;
+                  const isSelected =
+                    useStore.getState().room.gameSelected === game.id;
+                  return (
+                    <button
+                      key={game.id}
+                      onClick={() => useStore.getState().gmSelectGame(game.id)}
+                      className={`p-4 rounded-lg border text-left transition-all ${
+                        isSelected
+                          ? "bg-green-600/20 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)]"
+                          : "bg-neutral-900 border-neutral-700 hover:border-neutral-500"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h5
+                            className={`font-bold ${
+                              isSelected ? "text-green-400" : "text-white"
+                            }`}
+                          >
+                            {game.title}
+                          </h5>
+                          <p className="text-xs text-neutral-500">
+                            {game.desc}
+                          </p>
+                        </div>
+                        <div
+                          className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
+                            gameVotes > 0
+                              ? "bg-red-600 text-white"
+                              : "bg-neutral-800 text-neutral-500"
+                          }`}
+                        >
+                          {gameVotes} votos
+                        </div>
+                      </div>
+                      {isSelected && (
+                        <div className="mt-2 text-xs text-green-500 font-mono uppercase">
+                          ✓ SELECCIONADO
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -734,78 +680,137 @@ const UIGameMaster: React.FC = () => {
               </button>
             </div>
 
-            {/* GAME SELECTOR */}
-            <div className="mt-8 p-4 bg-neutral-950 border border-neutral-800 rounded-xl">
-              <h4 className="text-neutral-300 font-bold mb-4 flex items-center gap-2">
-                <BookOpen size={16} /> Selector de Juego
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {[
-                  {
-                    id: "juego1",
-                    title: "Atraco al Banco",
-                    desc: "Gestión de recursos",
-                  },
-                  { id: "juego2", title: "El Topo", desc: "Roles ocultos" },
-                  {
-                    id: "juego3",
-                    title: "Protocolo Fantasma",
-                    desc: "Hackeo y sigilo",
-                  },
-                  {
-                    id: "juego4",
-                    title: "Motín en la Prisión",
-                    desc: "Control de áreas",
-                  },
-                  { id: "juego5", title: "La Fuga", desc: "Cooperativo" },
-                  { id: "juego6", title: "Negociación", desc: "Bluffing" },
-                ].map((game) => {
-                  const gameVotes = votes[game.id]
-                    ? Object.keys(votes[game.id]).length
-                    : 0;
-                  const isSelected =
-                    useStore.getState().room.gameSelected === game.id;
-                  return (
-                    <button
-                      key={game.id}
-                      onClick={() => useStore.getState().gmSelectGame(game.id)}
-                      className={`p-4 rounded-lg border text-left transition-all ${
-                        isSelected
-                          ? "bg-green-600/20 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)]"
-                          : "bg-neutral-900 border-neutral-700 hover:border-neutral-500"
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h5
-                            className={`font-bold ${
-                              isSelected ? "text-green-400" : "text-white"
-                            }`}
-                          >
-                            {game.title}
-                          </h5>
-                          <p className="text-xs text-neutral-500">
-                            {game.desc}
-                          </p>
-                        </div>
-                        <div
-                          className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
-                            gameVotes > 0
-                              ? "bg-red-600 text-white"
-                              : "bg-neutral-800 text-neutral-500"
-                          }`}
-                        >
-                          {gameVotes} votos
-                        </div>
-                      </div>
-                      {isSelected && (
-                        <div className="mt-2 text-xs text-green-500 font-mono uppercase">
-                          ✓ SELECCIONADO
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+            {/* Ticker & Clock configuration (Intercambiado) */}
+            <div className="mt-8 pt-8 border-t border-neutral-800 grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Ticker Control */}
+              <div className="space-y-4">
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
+                  <Type size={16} /> Mensaje del Ticker
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={localTicker}
+                    onChange={(e) => setLocalTicker(e.target.value)}
+                    className="flex-1 bg-neutral-950 border border-neutral-700 rounded-xl px-4 py-3 text-white font-mono text-sm focus:border-yellow-500 focus:outline-none transition-colors"
+                  />
+                  <button
+                    onClick={handleTickerUpdate}
+                    className="bg-yellow-600 hover:bg-yellow-500 text-black font-bold px-4 py-2 rounded-xl transition-colors"
+                  >
+                    Publicar
+                  </button>
+                </div>
+
+                {/* Ticker Speed Slider */}
+                <div className="mt-4">
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2 mb-2">
+                    <Gauge size={16} /> Velocidad del Ticker: {tickerSpeed}s
+                  </label>
+                  <input
+                    type="range"
+                    min="5"
+                    max="60"
+                    value={tickerSpeed}
+                    onChange={(e) => gmSetTickerSpeed(Number(e.target.value))}
+                    className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-red-500"
+                  />
+                  <div className="flex justify-between text-[10px] text-neutral-600">
+                    <span>Rápido</span>
+                    <span>Lento</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reloj del Juego */}
+              <div className="space-y-4">
+                <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
+                  <Clock size={16} /> Reloj del Juego
+                </label>
+
+                {/* INPUT EDITABLE BLINDADO */}
+                <div className="bg-neutral-950 w-[150px] rounded-xl border border-neutral-800">
+                  <input
+                    type="text"
+                    placeholder="00:00"
+                    value={localTime}
+                    onChange={handleTimeChange}
+                    onFocus={() => setIsEditingClock(true)}
+                    onBlur={handleClockBlur}
+                    className="text-3xl font-mono font-black text-green-500 bg-transparent text-center w-full focus:outline-none placeholder:text-green-900"
+                  />
+                </div>
+
+                {/* BOTONES DE CONTROL - Grid 2 columnas */}
+                <div className="grid grid-cols-2 gap-1">
+                  {/* TARJETA CUENTA ATRÁS */}
+                  <button
+                    onClick={() => {
+                      if (
+                        clockConfig.mode === "countdown" &&
+                        clockConfig.isRunning
+                      ) {
+                        gmPauseClock();
+                      } else {
+                        gmStartClock("countdown");
+                      }
+                    }}
+                    className={`flex flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all hover:scale-105 ${
+                      clockConfig.mode === "countdown" && clockConfig.isRunning
+                        ? "bg-orange-900/30 border-orange-500 text-orange-400"
+                        : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-orange-600"
+                    }`}
+                  >
+                    {clockConfig.mode === "countdown" &&
+                    clockConfig.isRunning ? (
+                      <Pause size={25} className="text-orange-500" />
+                    ) : (
+                      <Play
+                        size={25}
+                        fill="currentColor"
+                        className="text-orange-500"
+                      />
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Hourglass size={20} />
+                      <span className="font-bold text-sm">Cuenta Atrás</span>
+                    </div>
+                  </button>
+
+                  {/* TARJETA CRONÓMETRO */}
+                  <button
+                    onClick={() => {
+                      if (
+                        clockConfig.mode === "stopwatch" &&
+                        clockConfig.isRunning
+                      ) {
+                        gmPauseClock();
+                      } else {
+                        gmStartClock("stopwatch");
+                      }
+                    }}
+                    className={`flex flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all hover:scale-105 ${
+                      clockConfig.mode === "stopwatch" && clockConfig.isRunning
+                        ? "bg-green-900/30 border-green-500 text-green-400"
+                        : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-green-600"
+                    }`}
+                  >
+                    {clockConfig.mode === "stopwatch" &&
+                    clockConfig.isRunning ? (
+                      <Pause size={25} className="text-green-500" />
+                    ) : (
+                      <Play
+                        size={25}
+                        fill="currentColor"
+                        className="text-green-500"
+                      />
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Timer size={20} />
+                      <span className="font-bold text-sm">Cronómetro</span>
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
 
