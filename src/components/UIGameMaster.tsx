@@ -25,8 +25,15 @@ import {
   Gauge,
   PowerOff,
   Pause,
+  RotateCcw,
+  Plus,
+  Trash2,
+  User,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import ModalWrapper from "./ModalWrapper";
+import ConfirmModal from "./ConfirmModal";
 import { useGameClock, formatTimeToMMSS } from "../hooks/useGameClock";
 
 type TabID = "control" | "narrative" | "actions";
@@ -41,6 +48,10 @@ const UIGameMaster: React.FC = () => {
   const status = useStore((state) => state.room.status);
   const players = useStore((state) => state.room.players);
   const votes = useStore((state) => state.room.votes);
+  const globalStates = useStore((state) => state.room.globalStates);
+  const playerStates = useStore((state) => state.room.playerStates);
+  const publicStates = useStore((state) => state.room.publicStates);
+  const currentGlobalState = useStore((state) => state.room.globalState);
 
   // Calculate clock time locally
   const timeString = useGameClock(clockConfig);
@@ -62,15 +73,60 @@ const UIGameMaster: React.FC = () => {
   const setCurrentView = useStore((state) => state.setCurrentView);
   const setNickname = useStore((state) => state.setNickname);
   const setGM = useStore((state) => state.setGM);
+  // State management actions
+  const gmAddGlobalState = useStore((state) => state.gmAddGlobalState);
+  const gmEditGlobalState = useStore((state) => state.gmEditGlobalState);
+  const gmDeleteGlobalState = useStore((state) => state.gmDeleteGlobalState);
+  const gmAddPlayerStateOption = useStore(
+    (state) => state.gmAddPlayerStateOption
+  );
+  const gmEditPlayerStateOption = useStore(
+    (state) => state.gmEditPlayerStateOption
+  );
+  const gmDeletePlayerStateOption = useStore(
+    (state) => state.gmDeletePlayerStateOption
+  );
+  const gmAddPublicStateOption = useStore(
+    (state) => state.gmAddPublicStateOption
+  );
+  const gmEditPublicStateOption = useStore(
+    (state) => state.gmEditPublicStateOption
+  );
+  const gmDeletePublicStateOption = useStore(
+    (state) => state.gmDeletePublicStateOption
+  );
+  const gmAssignPlayerState = useStore((state) => state.gmAssignPlayerState);
+  const gmAssignPublicState = useStore((state) => state.gmAssignPublicState);
 
   // Local state
   const [localTicker, setLocalTicker] = useState(tickerText);
-  const [globalState, setGlobalState] = useState("Día 1: Planificación");
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   const [playerStateInput, setPlayerStateInput] = useState("");
   const [publicStateInput, setPublicStateInput] = useState("");
   const [whisperText, setWhisperText] = useState("");
   const [showShutdownConfirm, setShowShutdownConfirm] = useState(false);
+  const [showEndSessionConfirm, setShowEndSessionConfirm] = useState(false);
+  const [showStartGameConfirm, setShowStartGameConfirm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showExpelConfirm, setShowExpelConfirm] = useState(false);
+
+  // State card editing
+  const [editingState, setEditingState] = useState<{
+    type: "global" | "player" | "public";
+    value: string;
+  } | null>(null);
+  const [newStateName, setNewStateName] = useState("");
+  const [addingStateType, setAddingStateType] = useState<
+    "global" | "player" | "public" | null
+  >(null);
+  const [assigningState, setAssigningState] = useState<{
+    type: "player" | "public";
+    value: string;
+  } | null>(null);
+  const [deleteStateConfirm, setDeleteStateConfirm] = useState<{
+    type: "global" | "player" | "public";
+    value: string;
+  } | null>(null);
 
   // Clock buffer state
   const [localTime, setLocalTime] = useState(
@@ -78,7 +134,7 @@ const UIGameMaster: React.FC = () => {
   );
   const [isEditingClock, setIsEditingClock] = useState(false);
 
-  // Sync local time with timeString when not editing
+  // Sync local time with baseTime when not editing (Static Config View)
   useEffect(() => {
     if (!isEditingClock) {
       setLocalTime(formatTimeToMMSS(clockConfig.baseTime));
@@ -113,16 +169,11 @@ const UIGameMaster: React.FC = () => {
   };
 
   const handleEndSession = async () => {
-    if (
-      confirm(
-        "¿FINALIZAR OPERATIVO? Se borrará el chat y el estado global volverá a espera."
-      )
-    ) {
-      await gmEndGame();
-      setNickname("");
-      setGM(false);
-      setCurrentView("login");
-    }
+    await gmEndGame();
+    setNickname("");
+    setGM(false);
+    setCurrentView("login");
+    setShowEndSessionConfirm(false);
   };
 
   const handleTickerUpdate = () => {
@@ -134,10 +185,8 @@ const UIGameMaster: React.FC = () => {
       (a, b) => Object.keys(b[1] || {}).length - Object.keys(a[1] || {}).length
     );
     const winner = sortedGames.length > 0 ? sortedGames[0][0] : "g1";
-
-    if (confirm("¿INICIAR MISIÓN? Todos los operativos serán desplegados.")) {
-      gmStartGame(winner);
-    }
+    gmStartGame(winner);
+    setShowStartGameConfirm(false);
   };
 
   const openPlayerEdit = (playerId: string) => {
@@ -172,13 +221,13 @@ const UIGameMaster: React.FC = () => {
     : null;
 
   return (
-    <div className="max-w-5xl mx-auto pb-24 animate-in fade-in duration-500">
+    <div className="max-w-5xl mx-auto animate-in fade-in duration-500">
       {/* --- GM Header / Tabs --- */}
-      <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4 border-b border-neutral-800 pb-4">
+      <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-2 border-b border-neutral-800 pb-4">
         <div>
-          <h2 className="text-2xl font-black text-white uppercase tracking-tighter flex items-center gap-2">
+          <h2 className="text-2xl font-black text-white  tracking-tighter flex items-center gap-2">
             <Settings className="text-red-500 animate-spin-slow" size={24} />
-            Panel de Control
+            Interfaz GM
           </h2>
           <p className="text-neutral-500 text-xs font-mono tracking-widest uppercase">
             Estado:{" "}
@@ -196,29 +245,29 @@ const UIGameMaster: React.FC = () => {
         <div className="flex bg-neutral-900 p-1 rounded-xl border border-neutral-800">
           <button
             onClick={() => setActiveTab("control")}
-            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+            className={`flex items-center gap-2 px-2 py-1 rounded-lg text-sm font-bold transition-all ${
               activeTab === "control"
                 ? "bg-neutral-800 text-white shadow-md"
                 : "text-neutral-500 hover:text-neutral-300"
             }`}
           >
             <Users size={16} />{" "}
-            <span className="hidden md:inline">Operativos</span>
+            <span className="hidden md:inline">Jugadores</span>
           </button>
           <button
             onClick={() => setActiveTab("narrative")}
-            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+            className={`flex items-center gap-2 px-2 py-1 rounded-lg text-sm font-bold transition-all ${
               activeTab === "narrative"
                 ? "bg-neutral-800 text-white shadow-md"
                 : "text-neutral-500 hover:text-neutral-300"
             }`}
           >
             <BookOpen size={16} />{" "}
-            <span className="hidden md:inline">Narrativa</span>
+            <span className="hidden md:inline">Tools</span>
           </button>
           <button
             onClick={() => setActiveTab("actions")}
-            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${
+            className={`flex items-center gap-2 px-2 py-1 rounded-lg text-sm font-bold transition-all ${
               activeTab === "actions"
                 ? "bg-neutral-800 text-white shadow-md"
                 : "text-neutral-500 hover:text-neutral-300"
@@ -231,22 +280,30 @@ const UIGameMaster: React.FC = () => {
         <div className="flex gap-2">
           {status === "waiting" ? (
             <button
-              onClick={handleStartGame}
-              className="bg-green-600 hover:bg-green-500 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-2 transition-all transform active:scale-95 shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+              onClick={() => setShowStartGameConfirm(true)}
+              className="bg-red-600 hover:bg-red-500 text-white font-bold px-2 py-1 rounded-xl flex items-center gap-2 transition-all transform active:scale-95 shadow-[0_0_15px_rgba(34,197,94,0.3)]"
             >
-              <Play size={18} fill="currentColor" /> INICIAR
+              <Play size={20} fill="currentColor" />
             </button>
           ) : (
             <button
               onClick={() => gmEndGame()}
-              className="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-2 transition-all transform active:scale-95 shadow-[0_0_15px_rgba(220,38,38,0.3)]"
+              className="bg-red-600 hover:bg-red-500 text-white font-bold px-2 py-1 rounded-xl flex items-center gap-2 transition-all transform active:scale-95 shadow-[0_0_15px_rgba(220,38,38,0.3)]"
             >
-              <Square size={18} fill="currentColor" /> DETENER
+              <Square size={20} fill="currentColor" /> DETENER
             </button>
           )}
 
           <button
-            onClick={handleEndSession}
+            onClick={() => setShowResetConfirm(true)}
+            className="bg-neutral-800 hover:bg-neutral-700 text-yellow-500 border border-neutral-700 p-2 rounded-xl transition-colors"
+            title="Reiniciar (enviar todos al patio)"
+          >
+            <RotateCcw size={20} />
+          </button>
+
+          <button
+            onClick={() => setShowEndSessionConfirm(true)}
             className="bg-neutral-800 hover:bg-neutral-700 text-neutral-400 border border-neutral-700 p-2 rounded-xl transition-colors"
             title="Desconectar"
           >
@@ -262,7 +319,7 @@ const UIGameMaster: React.FC = () => {
           <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider">
-                Gestión de Operativos ({players.filter((p) => !p.isGM).length})
+                Jugadores ({players.filter((p) => !p.isGM).length})
               </h3>
             </div>
 
@@ -272,11 +329,11 @@ const UIGameMaster: React.FC = () => {
                 .map((player) => (
                   <div
                     key={player.id}
-                    className="bg-neutral-950 border border-neutral-800 p-4 rounded-xl flex items-center justify-between group hover:border-neutral-600 transition-colors"
+                    className="bg-neutral-950 border border-neutral-800 p-2 rounded-xl flex items-center justify-between group hover:border-neutral-600 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className={`p-2 rounded-full ${
+                        className={`p-3 rounded-full ${
                           player.ready
                             ? "bg-green-500/10 text-green-500 border border-green-500/30"
                             : "bg-neutral-800 text-neutral-600 border border-neutral-700"
@@ -377,10 +434,7 @@ const UIGameMaster: React.FC = () => {
               </label>
 
               {/* INPUT EDITABLE BLINDADO */}
-              <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800">
-                <label className="text-xs text-neutral-500 mb-2 block">
-                  Configurar Tiempo (MM:SS):
-                </label>
+              <div className="bg-neutral-950 w-[150px] rounded-xl border border-neutral-800">
                 <input
                   type="text"
                   placeholder="00:00"
@@ -390,41 +444,33 @@ const UIGameMaster: React.FC = () => {
                   onBlur={handleClockBlur}
                   className="text-3xl font-mono font-black text-green-500 bg-transparent text-center w-full focus:outline-none placeholder:text-green-900"
                 />
-                <p className="text-[10px] text-neutral-600 text-center mt-2">
-                  Escribe los números, el formato es automático.
-                </p>
               </div>
 
               {/* BOTONES DE CONTROL - Grid 2 columnas */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-1">
                 {/* TARJETA CUENTA ATRÁS */}
                 <button
                   onClick={() => {
                     if (
                       clockConfig.mode === "countdown" &&
-                      clockConfig.startTime !== null &&
-                      clockConfig.pausedAt === null
+                      clockConfig.isRunning
                     ) {
                       gmPauseClock();
                     } else {
                       gmStartClock("countdown");
                     }
                   }}
-                  className={`flex flex-col items-center justify-center gap-3 p-6 rounded-xl border transition-all hover:scale-105 ${
-                    clockConfig.mode === "countdown" &&
-                    clockConfig.startTime !== null &&
-                    clockConfig.pausedAt === null
+                  className={`flex flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all hover:scale-105 ${
+                    clockConfig.mode === "countdown" && clockConfig.isRunning
                       ? "bg-orange-900/30 border-orange-500 text-orange-400"
                       : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-orange-600"
                   }`}
                 >
-                  {clockConfig.mode === "countdown" &&
-                  clockConfig.startTime !== null &&
-                  clockConfig.pausedAt === null ? (
-                    <Pause size={32} className="text-orange-500" />
+                  {clockConfig.mode === "countdown" && clockConfig.isRunning ? (
+                    <Pause size={25} className="text-orange-500" />
                   ) : (
                     <Play
-                      size={32}
+                      size={25}
                       fill="currentColor"
                       className="text-orange-500"
                     />
@@ -440,29 +486,24 @@ const UIGameMaster: React.FC = () => {
                   onClick={() => {
                     if (
                       clockConfig.mode === "stopwatch" &&
-                      clockConfig.startTime !== null &&
-                      clockConfig.pausedAt === null
+                      clockConfig.isRunning
                     ) {
                       gmPauseClock();
                     } else {
                       gmStartClock("stopwatch");
                     }
                   }}
-                  className={`flex flex-col items-center justify-center gap-3 p-6 rounded-xl border transition-all hover:scale-105 ${
-                    clockConfig.mode === "stopwatch" &&
-                    clockConfig.startTime !== null &&
-                    clockConfig.pausedAt === null
+                  className={`flex flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all hover:scale-105 ${
+                    clockConfig.mode === "stopwatch" && clockConfig.isRunning
                       ? "bg-green-900/30 border-green-500 text-green-400"
                       : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-green-600"
                   }`}
                 >
-                  {clockConfig.mode === "stopwatch" &&
-                  clockConfig.startTime !== null &&
-                  clockConfig.pausedAt === null ? (
-                    <Pause size={32} className="text-green-500" />
+                  {clockConfig.mode === "stopwatch" && clockConfig.isRunning ? (
+                    <Pause size={25} className="text-green-500" />
                   ) : (
                     <Play
-                      size={32}
+                      size={25}
                       fill="currentColor"
                       className="text-green-500"
                     />
@@ -477,33 +518,175 @@ const UIGameMaster: React.FC = () => {
 
             {/* Global State */}
             <div className="space-y-4 md:col-span-2">
-              <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
-                <Globe size={16} /> Estado Global (Fase)
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {[
-                  "Día 1",
-                  "Noche 1",
-                  "Día 2",
-                  "Noche 2",
-                  "Alerta Roja",
-                  "Victoria",
-                  "Derrota",
-                ].map((state) => (
-                  <button
-                    key={state}
-                    onClick={() => {
-                      setGlobalState(state);
-                      gmUpdateGlobalState(state);
-                    }}
-                    className={`p-3 rounded-lg border text-sm font-medium transition-all ${
-                      globalState === state
-                        ? "bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.3)]"
-                        : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600"
-                    }`}
-                  >
-                    {state}
-                  </button>
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-neutral-500 tracking-wider uppercase flex items-center gap-2">
+                  Estado Global (Fase) <Globe size={14} />
+                </label>
+                <button
+                  onClick={() => setAddingStateType("global")}
+                  className="p-1 rounded bg-neutral-800 hover:bg-neutral-700 text-green-500 transition-colors"
+                  title="Añadir estado"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-1">
+                {globalStates.map((state) => (
+                  <div key={state} className="relative group">
+                    <button
+                      onClick={() => gmUpdateGlobalState(state)}
+                      className={`w-full p-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-between bg-purple-950/20 border-purple-900/50 text-purple-400 hover:border-purple-500 hover:bg-purple-950/30 ${
+                        currentGlobalState === state
+                          ? "bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.3)]"
+                          : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600"
+                      }`}
+                    >
+                      <span className="truncate">{state}</span>
+                      {currentGlobalState === state && (
+                        <CheckCircle2 size={14} className="shrink-0 ml-2" />
+                      )}
+                    </button>
+                    <div className="absolute -top-6 -right-1 hidden group-hover:flex gap-1 z-10">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingState({ type: "global", value: state });
+                          setNewStateName(state);
+                        }}
+                        className="p-1.5 bg-blue-600 rounded-full text-white hover:bg-blue-500 shadow-lg"
+                        title="Editar"
+                      >
+                        <Edit2 size={10} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteStateConfirm({
+                            type: "global",
+                            value: state,
+                          });
+                        }}
+                        className="p-1.5 bg-red-600 rounded-full text-white hover:bg-red-500 shadow-lg"
+                        title="Borrar"
+                      >
+                        <Trash2 size={10} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Personal States (PlayerState) */}
+            <div className="space-y-4 md:col-span-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
+                  Estados Personales <EyeOff size={14} />
+                </label>
+                <button
+                  onClick={() => setAddingStateType("player")}
+                  className="p-1 rounded bg-neutral-800 hover:bg-neutral-700 text-green-500 transition-colors"
+                  title="Añadir estado"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-1">
+                {playerStates.map((state) => (
+                  <div key={state} className="relative group">
+                    <button
+                      onClick={() =>
+                        setAssigningState({ type: "player", value: state })
+                      }
+                      className="w-full p-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-between bg-purple-950/20 border-purple-900/50 text-purple-400 hover:border-purple-500 hover:bg-purple-950/30"
+                    >
+                      <span className="truncate">{state}</span>
+                      <EyeOff size={14} className="shrink-0 ml-2" />
+                    </button>
+                    <div className="absolute -top-6 -right-1 hidden group-hover:flex gap-1 z-10">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingState({ type: "player", value: state });
+                          setNewStateName(state);
+                        }}
+                        className="p-1.5 bg-blue-600 rounded-full text-white hover:bg-blue-500 shadow-lg"
+                        title="Editar"
+                      >
+                        <Edit2 size={10} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteStateConfirm({
+                            type: "player",
+                            value: state,
+                          });
+                        }}
+                        className="p-1.5 bg-red-600 rounded-full text-white hover:bg-red-500 shadow-lg"
+                        title="Borrar"
+                      >
+                        <Trash2 size={10} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Public States (PublicState) */}
+            <div className="space-y-4 md:col-span-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
+                  Estados Públicos (Visible) <Eye size={14} />
+                </label>
+                <button
+                  onClick={() => setAddingStateType("public")}
+                  className="p-1 rounded bg-neutral-800 hover:bg-neutral-700 text-green-500 transition-colors"
+                  title="Añadir estado"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-1">
+                {publicStates.map((state) => (
+                  <div key={state} className="relative group">
+                    <button
+                      onClick={() =>
+                        setAssigningState({ type: "public", value: state })
+                      }
+                      className="w-full p-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-between bg-blue-950/20 border-blue-900/50 text-blue-400 hover:border-blue-500 hover:bg-blue-950/30"
+                    >
+                      <span className="truncate">{state}</span>
+                      <Eye size={14} className="shrink-0 ml-2" />
+                    </button>
+                    <div className="absolute -top-6 -right-1 hidden group-hover:flex gap-1 z-10">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingState({ type: "public", value: state });
+                          setNewStateName(state);
+                        }}
+                        className="p-1.5 bg-blue-600 rounded-full text-white hover:bg-blue-500 shadow-lg"
+                        title="Editar"
+                      >
+                        <Edit2 size={10} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteStateConfirm({
+                            type: "public",
+                            value: state,
+                          });
+                        }}
+                        className="p-1.5 bg-red-600 rounded-full text-white hover:bg-red-500 shadow-lg"
+                        title="Borrar"
+                      >
+                        <Trash2 size={10} />
+                      </button>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -551,9 +734,84 @@ const UIGameMaster: React.FC = () => {
               </button>
             </div>
 
+            {/* GAME SELECTOR */}
+            <div className="mt-8 p-4 bg-neutral-950 border border-neutral-800 rounded-xl">
+              <h4 className="text-neutral-300 font-bold mb-4 flex items-center gap-2">
+                <BookOpen size={16} /> Selector de Juego
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[
+                  {
+                    id: "juego1",
+                    title: "Atraco al Banco",
+                    desc: "Gestión de recursos",
+                  },
+                  { id: "juego2", title: "El Topo", desc: "Roles ocultos" },
+                  {
+                    id: "juego3",
+                    title: "Protocolo Fantasma",
+                    desc: "Hackeo y sigilo",
+                  },
+                  {
+                    id: "juego4",
+                    title: "Motín en la Prisión",
+                    desc: "Control de áreas",
+                  },
+                  { id: "juego5", title: "La Fuga", desc: "Cooperativo" },
+                  { id: "juego6", title: "Negociación", desc: "Bluffing" },
+                ].map((game) => {
+                  const gameVotes = votes[game.id]
+                    ? Object.keys(votes[game.id]).length
+                    : 0;
+                  const isSelected =
+                    useStore.getState().room.gameSelected === game.id;
+                  return (
+                    <button
+                      key={game.id}
+                      onClick={() => useStore.getState().gmSelectGame(game.id)}
+                      className={`p-4 rounded-lg border text-left transition-all ${
+                        isSelected
+                          ? "bg-green-600/20 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)]"
+                          : "bg-neutral-900 border-neutral-700 hover:border-neutral-500"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h5
+                            className={`font-bold ${
+                              isSelected ? "text-green-400" : "text-white"
+                            }`}
+                          >
+                            {game.title}
+                          </h5>
+                          <p className="text-xs text-neutral-500">
+                            {game.desc}
+                          </p>
+                        </div>
+                        <div
+                          className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
+                            gameVotes > 0
+                              ? "bg-red-600 text-white"
+                              : "bg-neutral-800 text-neutral-500"
+                          }`}
+                        >
+                          {gameVotes} votos
+                        </div>
+                      </div>
+                      {isSelected && (
+                        <div className="mt-2 text-xs text-green-500 font-mono uppercase">
+                          ✓ SELECCIONADO
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="mt-8 p-4 bg-red-950/20 border border-red-900/30 rounded-xl">
               <h4 className="text-red-500 font-bold mb-4 flex items-center gap-2">
-                <Settings size={16} /> Zona pegrilosa
+                <Settings size={16} /> Zona peligrosa
               </h4>
               <div className="flex gap-4 flex-wrap">
                 <button
@@ -644,16 +902,7 @@ const UIGameMaster: React.FC = () => {
                 <UserX size={16} /> Kick (→ Patio)
               </button>
               <button
-                onClick={async () => {
-                  if (
-                    confirm(
-                      `¿Expulsar a ${editingPlayerData.nickname} permanentemente?`
-                    )
-                  ) {
-                    await gmRemovePlayer(editingPlayer);
-                    setEditingPlayer(null);
-                  }
-                }}
+                onClick={() => setShowExpelConfirm(true)}
                 className="flex items-center justify-center gap-2 p-3 bg-red-900/20 text-red-500 border border-red-900/50 rounded-lg hover:bg-red-900 hover:text-white text-sm transition-colors"
               >
                 <Ban size={16} /> Expulsar
@@ -665,33 +914,283 @@ const UIGameMaster: React.FC = () => {
 
       {/* SHUTDOWN CONFIRMATION MODAL */}
       {showShutdownConfirm && (
+        <ConfirmModal
+          title="¿Confirmas SHUTDOWN?"
+          message="Reiniciarás la base de datos, se borrarán chats, votos y estados. ¡Todo hará puff!"
+          confirmText="Sí, ¡Por favor!"
+          cancelText="Mejor no..."
+          variant="danger"
+          onConfirm={async () => {
+            await gmResetRoom();
+            setShowShutdownConfirm(false);
+          }}
+          onCancel={() => setShowShutdownConfirm(false)}
+        />
+      )}
+
+      {/* END SESSION CONFIRMATION MODAL */}
+      {showEndSessionConfirm && (
+        <ConfirmModal
+          title="Finalizar Operativo"
+          message="¿FINALIZAR OPERATIVO? Se borrará el chat y el estado global volverá a espera."
+          confirmText="Sí, salir"
+          cancelText="Cancelar"
+          variant="danger"
+          onConfirm={handleEndSession}
+          onCancel={() => setShowEndSessionConfirm(false)}
+        />
+      )}
+
+      {/* START GAME CONFIRMATION MODAL */}
+      {showStartGameConfirm && (
+        <ConfirmModal
+          title="Iniciar Misión"
+          message="¿INICIAR MISIÓN? Todos los Jugadores serán desplegados."
+          confirmText="¡Iniciar!"
+          cancelText="Cancelar"
+          variant="info"
+          onConfirm={handleStartGame}
+          onCancel={() => setShowStartGameConfirm(false)}
+        />
+      )}
+
+      {/* SOFT RESET CONFIRMATION MODAL */}
+      {showResetConfirm && (
+        <ConfirmModal
+          title="Reiniciar Partida"
+          message="Se enviará a todos los jugadores al patio sin cerrar sesiones. ¿Continuar?"
+          confirmText="Reiniciar"
+          cancelText="Cancelar"
+          variant="warning"
+          onConfirm={async () => {
+            await gmEndGame();
+            setShowResetConfirm(false);
+          }}
+          onCancel={() => setShowResetConfirm(false)}
+        />
+      )}
+
+      {/* EXPEL PLAYER CONFIRMATION MODAL */}
+      {showExpelConfirm && editingPlayerData && (
+        <ConfirmModal
+          title="Expulsar Jugador"
+          message={`¿Expulsar a ${editingPlayerData.nickname} permanentemente?`}
+          confirmText="Expulsar"
+          cancelText="Cancelar"
+          variant="danger"
+          onConfirm={async () => {
+            if (editingPlayer) {
+              await gmRemovePlayer(editingPlayer);
+              setEditingPlayer(null);
+            }
+            setShowExpelConfirm(false);
+          }}
+          onCancel={() => setShowExpelConfirm(false)}
+        />
+      )}
+
+      {/* EDIT STATE MODAL */}
+      {editingState && (
         <ModalWrapper
-          title="⚠️¿Confirmas SHUTDOWN?⚠️"
-          onClose={() => setShowShutdownConfirm(false)}
+          title={`Editar ${
+            editingState.type === "global"
+              ? "Estado Global"
+              : editingState.type === "player"
+              ? "Estado Personal"
+              : "Estado Público"
+          }`}
+          onClose={() => {
+            setEditingState(null);
+            setNewStateName("");
+          }}
         >
-          <div className="space-y-2">
-            <p className="text-neutral-300 text-center text-lg">
-              
-              Reiniciarás la base de datos, se borrarán chats, votos y estados.
-              Todo hará puff!
-            </p>
-            <div className="flex gap-3">
+          <div className="space-y-4">
+            <input
+              type="text"
+              value={newStateName}
+              onChange={(e) => setNewStateName(e.target.value)}
+              className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white"
+              placeholder="Nuevo nombre"
+              autoFocus
+            />
+            <div className="flex gap-2">
               <button
-                onClick={async () => {
-                  await gmResetRoom();
-                  setShowShutdownConfirm(false);
+                onClick={() => {
+                  if (newStateName.trim()) {
+                    if (editingState.type === "global")
+                      gmEditGlobalState(
+                        editingState.value,
+                        newStateName.trim()
+                      );
+                    else if (editingState.type === "player")
+                      gmEditPlayerStateOption(
+                        editingState.value,
+                        newStateName.trim()
+                      );
+                    else
+                      gmEditPublicStateOption(
+                        editingState.value,
+                        newStateName.trim()
+                      );
+                    setEditingState(null);
+                    setNewStateName("");
+                  }
                 }}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white px-1 py-1 rounded-lg font-bold transition-colors"
+                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg font-bold"
               >
-                Sí, ¡Por favor!
+                Guardar
               </button>
               <button
-                onClick={() => setShowShutdownConfirm(false)}
-                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white px-1 py-1 rounded-lg font-bold transition-colors"
+                onClick={() => {
+                  setEditingState(null);
+                  setNewStateName("");
+                }}
+                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white py-2 rounded-lg font-bold"
               >
-                Mejor no...
+                Cancelar
               </button>
             </div>
+          </div>
+        </ModalWrapper>
+      )}
+
+      {/* ADD STATE MODAL */}
+      {addingStateType && (
+        <ModalWrapper
+          title={`Añadir ${
+            addingStateType === "global"
+              ? "Estado Global"
+              : addingStateType === "player"
+              ? "Estado Personal"
+              : "Estado Público"
+          }`}
+          onClose={() => {
+            setAddingStateType(null);
+            setNewStateName("");
+          }}
+        >
+          <div className="space-y-4">
+            <input
+              type="text"
+              value={newStateName}
+              onChange={(e) => setNewStateName(e.target.value)}
+              className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white"
+              placeholder="Nombre del estado"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  if (newStateName.trim()) {
+                    if (addingStateType === "global")
+                      gmAddGlobalState(newStateName.trim());
+                    else if (addingStateType === "player")
+                      gmAddPlayerStateOption(newStateName.trim());
+                    else gmAddPublicStateOption(newStateName.trim());
+                    setAddingStateType(null);
+                    setNewStateName("");
+                  }
+                }}
+                className="flex-1 bg-green-600 hover:bg-green-500 text-white py-2 rounded-lg font-bold"
+              >
+                Añadir
+              </button>
+              <button
+                onClick={() => {
+                  setAddingStateType(null);
+                  setNewStateName("");
+                }}
+                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white py-2 rounded-lg font-bold"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </ModalWrapper>
+      )}
+
+      {/* DELETE STATE CONFIRMATION MODAL */}
+      {deleteStateConfirm && (
+        <ConfirmModal
+          title="Borrar Estado"
+          message={`¿Borrar "${deleteStateConfirm.value}" permanentemente?`}
+          confirmText="Borrar"
+          cancelText="Cancelar"
+          variant="danger"
+          onConfirm={() => {
+            if (deleteStateConfirm.type === "global")
+              gmDeleteGlobalState(deleteStateConfirm.value);
+            else if (deleteStateConfirm.type === "player")
+              gmDeletePlayerStateOption(deleteStateConfirm.value);
+            else gmDeletePublicStateOption(deleteStateConfirm.value);
+            setDeleteStateConfirm(null);
+          }}
+          onCancel={() => setDeleteStateConfirm(null)}
+        />
+      )}
+
+      {/* ASSIGN STATE TO PLAYER MODAL */}
+      {assigningState && (
+        <ModalWrapper
+          title={`Asignar "${assigningState.value}"`}
+          onClose={() => setAssigningState(null)}
+        >
+          <div className="space-y-3">
+            <p className="text-neutral-400 text-sm mb-4">
+              Selecciona un jugador para asignarle este{" "}
+              {assigningState.type === "player"
+                ? "estado personal"
+                : "estado público"}
+              :
+            </p>
+            <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+              {players
+                .filter((p) => !p.isGM)
+                .map((player) => (
+                  <button
+                    key={player.id}
+                    onClick={async () => {
+                      if (assigningState.type === "player") {
+                        await gmAssignPlayerState(
+                          player.id,
+                          assigningState.value
+                        );
+                      } else {
+                        await gmAssignPublicState(
+                          player.id,
+                          assigningState.value
+                        );
+                      }
+                      setAssigningState(null);
+                    }}
+                    className="flex items-center gap-3 p-3 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors text-left"
+                  >
+                    <User size={18} className="text-neutral-500" />
+                    <div>
+                      <span className="font-bold text-white">
+                        {player.nickname}
+                      </span>
+                      {assigningState.type === "player" &&
+                        player.playerState && (
+                          <span className="block text-xs text-purple-400">
+                            {player.playerState}
+                          </span>
+                        )}
+                      {assigningState.type === "public" &&
+                        player.publicState && (
+                          <span className="block text-xs text-blue-400">
+                            {player.publicState}
+                          </span>
+                        )}
+                    </div>
+                  </button>
+                ))}
+            </div>
+            {players.filter((p) => !p.isGM).length === 0 && (
+              <p className="text-neutral-500 text-center py-4">
+                No hay jugadores conectados
+              </p>
+            )}
           </div>
         </ModalWrapper>
       )}

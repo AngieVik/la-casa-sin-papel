@@ -40,12 +40,15 @@ export interface RoomState {
   tickerText: string;
   clockConfig: {
     mode: "static" | "countdown" | "stopwatch";
-    baseTime: number; // Tiempo base en segundos (lo que se ve cuando está estático)
-    startTime: number | null; // Timestamp de cuando se dio a play
-    pausedAt: number | null; // Timestamp de cuando se pausó
+    baseTime: number; // Tiempo base en segundos (lo que se ve)
+    isRunning: boolean; // Si el reloj está corriendo
   };
   tickerSpeed: number; // Velocidad en segundos del ciclo
   channels: Record<string, ChatMessage[]>; // { global: [], private_uid: [], room_name: [] }
+  // Estados personalizables
+  globalStates: string[]; // Estados globales (Día, Noche, etc.)
+  playerStates: string[]; // Estados personales (Envenenado, etc.)
+  publicStates: string[]; // Estados públicos (Vivo, Muerto, etc.)
 }
 
 export interface UIState {
@@ -89,6 +92,7 @@ export interface AppStore {
   gmResetClock: () => void;
   gmSetStaticTime: (timeString: string) => void;
   gmSetTickerSpeed: (speed: number) => void;
+  clockTick: () => void;
   gmKickPlayer: (playerId: string) => Promise<void>;
   gmRemovePlayer: (playerId: string) => Promise<void>;
   gmUpdatePlayerState: (
@@ -98,4 +102,18 @@ export interface AppStore {
   ) => Promise<void>;
   gmWhisper: (playerId: string, text: string) => Promise<void>;
   gmResetRoom: () => Promise<void>;
+
+  // State Management Actions
+  gmAddGlobalState: (state: string) => void;
+  gmEditGlobalState: (oldState: string, newState: string) => void;
+  gmDeleteGlobalState: (state: string) => void;
+  gmAddPlayerStateOption: (state: string) => void;
+  gmEditPlayerStateOption: (oldState: string, newState: string) => void;
+  gmDeletePlayerStateOption: (state: string) => void;
+  gmAddPublicStateOption: (state: string) => void;
+  gmEditPublicStateOption: (oldState: string, newState: string) => void;
+  gmDeletePublicStateOption: (state: string) => void;
+  gmAssignPlayerState: (playerId: string, state: string) => Promise<void>;
+  gmAssignPublicState: (playerId: string, state: string) => Promise<void>;
+  gmSelectGame: (gameId: string) => Promise<void>;
 }

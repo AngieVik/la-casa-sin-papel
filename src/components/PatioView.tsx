@@ -155,10 +155,10 @@ const PatioView: React.FC = () => {
         </button>
       </section>
 
-      {/* SECCIÓN 3: Lista de Operativos */}
+      {/* SECCIÓN 3: Lista de Jugadores */}
       <section>
         <h2 className="text-xl font-bold text-neutral-400 mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5" /> OPERATIVOS EN LÍNEA ({players.length})
+          <Users className="w-5 h-5" /> Jugadores EN LÍNEA ({players.length})
         </h2>
         <div className="grid grid-cols-2 gap-3">
           {players.map((player) => (

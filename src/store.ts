@@ -18,8 +18,7 @@ const ROOM_REF = "rooms/defaultRoom";
 const DEFAULT_CLOCK_CONFIG = {
   mode: "static" as const,
   baseTime: 0,
-  startTime: null,
-  pausedAt: null,
+  isRunning: false,
 };
 
 export const useStore = create<AppStore>((set, get) => ({
@@ -34,11 +33,14 @@ export const useStore = create<AppStore>((set, get) => ({
     players: [],
     messages: [],
     votes: {},
-    globalState: "Día 1: Planificación",
+    globalState: "Día",
     tickerText: "Esperando conexión...",
-    clockConfig: DEFAULT_CLOCK_CONFIG, // Usamos la constante aquí
+    clockConfig: DEFAULT_CLOCK_CONFIG,
     tickerSpeed: 20,
     channels: { global: [] },
+    globalStates: ["Día", "Noche"],
+    playerStates: ["Envenenado", "Peruano", "De Viator"],
+    publicStates: ["Vivo", "Muerto", "Carcel"],
   },
   ui: {
     isChatOpen: false,
@@ -249,19 +251,27 @@ export const useStore = create<AppStore>((set, get) => ({
             }
           }
 
-          // Protección robusta al recibir datos
+          // Protecci\u00f3n robusta al recibir datos
           return {
             room: {
               ...state.room,
               status: newStatus,
-              tickerText: data.ticker || "Sistema en línea.",
-              clockConfig: data.clockConfig || DEFAULT_CLOCK_CONFIG, 
+              tickerText: data.ticker || "Sistema en l\u00ednea.",
+              clockConfig: data.clockConfig || DEFAULT_CLOCK_CONFIG,
               tickerSpeed: data.tickerSpeed || 20,
               globalState: data.globalState || "Esperando",
               players: playersList,
               messages: channelsData.global || [],
               votes: data.votes || {},
               channels: channelsData,
+              gameSelected: data.gameSelected || null,
+              globalStates: data.globalStates || ["D\u00eda", "Noche"],
+              playerStates: data.playerStates || [
+                "Envenenado",
+                "Peruano",
+                "De Viator",
+              ],
+              publicStates: data.publicStates || ["Vivo", "Muerto", "Carcel"],
             },
             ui: {
               ...state.ui,
@@ -338,8 +348,7 @@ export const useStore = create<AppStore>((set, get) => ({
     const newConfig = {
       mode: "static" as const,
       baseTime: safeSeconds,
-      startTime: null,
-      pausedAt: null,
+      isRunning: false,
     };
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
   },
@@ -348,49 +357,17 @@ export const useStore = create<AppStore>((set, get) => ({
     const { room } = get();
     const config = room.clockConfig || DEFAULT_CLOCK_CONFIG;
 
-    const isStartTimeValid =
-      config.startTime !== null && !isNaN(config.startTime);
-    const isPausedAtValid =
-      config.pausedAt !== null && !isNaN(config.pausedAt);
+    // If already running, do nothing
+    if (config.isRunning) return;
 
-    const currentBaseTime = isNaN(config.baseTime) ? 0 : config.baseTime;
+    // Prevent starting countdown if already at 0
+    if (mode === "countdown" && config.baseTime <= 0) return;
 
-    let newConfig;
-
-    if (!isStartTimeValid && !isPausedAtValid) {
-      // Caso 1: Estaba parado. INICIAR.
-      newConfig = {
-        ...config,
-        mode,
-        baseTime: currentBaseTime,
-        startTime: Date.now(),
-        pausedAt: null,
-      };
-    } else if (isPausedAtValid) {
-      // Caso 2: Estaba pausado. REANUDAR.
-      const startRef = isStartTimeValid ? config.startTime! : config.pausedAt!;
-      const previousRunTime = (config.pausedAt! - startRef) / 1000;
-
-      const safePreviousRunTime = isNaN(previousRunTime) ? 0 : previousRunTime;
-
-      let newBaseTime = currentBaseTime;
-
-      if (config.mode === "countdown") {
-        newBaseTime = Math.max(0, currentBaseTime - safePreviousRunTime);
-      } else if (config.mode === "stopwatch") {
-        newBaseTime = currentBaseTime + safePreviousRunTime;
-      }
-
-      newConfig = {
-        mode: mode,
-        baseTime: newBaseTime,
-        startTime: Date.now(),
-        pausedAt: null,
-      };
-    } else {
-      // Caso 3: Ya está corriendo.
-      return;
-    }
+    const newConfig = {
+      mode,
+      baseTime: config.baseTime,
+      isRunning: true,
+    };
 
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
   },
@@ -399,16 +376,11 @@ export const useStore = create<AppStore>((set, get) => ({
     const { room } = get();
     const config = room.clockConfig || DEFAULT_CLOCK_CONFIG;
 
-    const isStartTimeValid =
-      config.startTime !== null && !isNaN(config.startTime);
-    const isPausedAtValid =
-      config.pausedAt !== null && !isNaN(config.pausedAt);
-
-    if (!isStartTimeValid || isPausedAtValid) return;
+    if (!config.isRunning) return;
 
     const newConfig = {
       ...config,
-      pausedAt: Date.now(),
+      isRunning: false,
     };
 
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
@@ -420,8 +392,7 @@ export const useStore = create<AppStore>((set, get) => ({
 
     const newConfig = {
       ...currentConfig,
-      startTime: null,
-      pausedAt: null,
+      isRunning: false,
     };
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
   },
@@ -437,10 +408,40 @@ export const useStore = create<AppStore>((set, get) => ({
     const newConfig = {
       mode: "static" as const,
       baseTime: totalSeconds,
-      startTime: null,
-      pausedAt: null,
+      isRunning: false,
     };
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
+  },
+
+  // --- NEW: Tick action called every second ---
+  clockTick: () => {
+    const { room, user } = get();
+    const config = room.clockConfig || DEFAULT_CLOCK_CONFIG;
+
+    // Only GM should tick to Firebase to avoid conflicts
+    if (!user.isGM) return;
+    if (!config.isRunning) return;
+
+    let newBaseTime = config.baseTime;
+
+    if (config.mode === "stopwatch") {
+      newBaseTime = config.baseTime + 1;
+      // Loop back at 99:59 (5999s)
+      if (newBaseTime >= 6000) newBaseTime = 0;
+    } else if (config.mode === "countdown") {
+      newBaseTime = config.baseTime - 1;
+      if (newBaseTime <= 0) {
+        // Stop at 0
+        update(ref(db, ROOM_REF), {
+          clockConfig: { ...config, baseTime: 0, isRunning: false },
+        });
+        return;
+      }
+    }
+
+    update(ref(db, ROOM_REF), {
+      clockConfig: { ...config, baseTime: newBaseTime },
+    });
   },
 
   gmSetTickerSpeed: (speed: number) => {
@@ -505,7 +506,7 @@ export const useStore = create<AppStore>((set, get) => ({
   // --- BOTÓN NUCLEAR DE LIMPIEZA ---
   gmResetRoom: async () => {
     const { room } = get();
-    
+
     // Usamos la constante segura para forzar una limpieza real
     const safeClockConfig = DEFAULT_CLOCK_CONFIG;
 
@@ -526,5 +527,80 @@ export const useStore = create<AppStore>((set, get) => ({
     });
 
     await update(ref(db, ROOM_REF), updates);
+  },
+
+  // --- State Management Actions ---
+  gmAddGlobalState: (state: string) => {
+    const { room } = get();
+    const newStates = [...room.globalStates, state];
+    update(ref(db, ROOM_REF), { globalStates: newStates });
+  },
+
+  gmEditGlobalState: (oldState: string, newState: string) => {
+    const { room } = get();
+    const newStates = room.globalStates.map((s) =>
+      s === oldState ? newState : s
+    );
+    update(ref(db, ROOM_REF), { globalStates: newStates });
+  },
+
+  gmDeleteGlobalState: (state: string) => {
+    const { room } = get();
+    const newStates = room.globalStates.filter((s) => s !== state);
+    update(ref(db, ROOM_REF), { globalStates: newStates });
+  },
+
+  gmAddPlayerStateOption: (state: string) => {
+    const { room } = get();
+    const newStates = [...room.playerStates, state];
+    update(ref(db, ROOM_REF), { playerStates: newStates });
+  },
+
+  gmEditPlayerStateOption: (oldState: string, newState: string) => {
+    const { room } = get();
+    const newStates = room.playerStates.map((s) =>
+      s === oldState ? newState : s
+    );
+    update(ref(db, ROOM_REF), { playerStates: newStates });
+  },
+
+  gmDeletePlayerStateOption: (state: string) => {
+    const { room } = get();
+    const newStates = room.playerStates.filter((s) => s !== state);
+    update(ref(db, ROOM_REF), { playerStates: newStates });
+  },
+
+  gmAddPublicStateOption: (state: string) => {
+    const { room } = get();
+    const newStates = [...room.publicStates, state];
+    update(ref(db, ROOM_REF), { publicStates: newStates });
+  },
+
+  gmEditPublicStateOption: (oldState: string, newState: string) => {
+    const { room } = get();
+    const newStates = room.publicStates.map((s) =>
+      s === oldState ? newState : s
+    );
+    update(ref(db, ROOM_REF), { publicStates: newStates });
+  },
+
+  gmDeletePublicStateOption: (state: string) => {
+    const { room } = get();
+    const newStates = room.publicStates.filter((s) => s !== state);
+    update(ref(db, ROOM_REF), { publicStates: newStates });
+  },
+
+  gmAssignPlayerState: async (playerId: string, state: string) => {
+    const playerRef = ref(db, `${ROOM_REF}/players/${playerId}`);
+    await update(playerRef, { playerState: state });
+  },
+
+  gmAssignPublicState: async (playerId: string, state: string) => {
+    const playerRef = ref(db, `${ROOM_REF}/players/${playerId}`);
+    await update(playerRef, { publicState: state });
+  },
+
+  gmSelectGame: async (gameId: string) => {
+    await update(ref(db, ROOM_REF), { gameSelected: gameId });
   },
 }));

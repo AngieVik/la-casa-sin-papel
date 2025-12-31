@@ -10,9 +10,20 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import ModalWrapper from "./ModalWrapper";
+import ConfirmModal from "./ConfirmModal";
 import { ref, update as firebaseUpdate } from "firebase/database";
 import { db } from "../firebaseConfig";
-import { useGameClock } from "../hooks/useGameClock";
+
+// Simple format function
+const formatTime = (totalSeconds: number): string => {
+  if (isNaN(totalSeconds)) return "00:00";
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
+    2,
+    "0"
+  )}`;
+};
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -32,19 +43,29 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isGM = useStore((state) => state.user.isGM);
   const tickerSpeed = useStore((state) => state.room.tickerSpeed);
   const setActiveChannel = useStore((state) => state.setActiveChannel);
+  const clockTick = useStore((state) => state.clockTick);
 
-  // Calculate clock time locally
-  const timeString = useGameClock(clockConfig);
+  // Format baseTime directly - no complex calculation needed
+  const timeString = formatTime(clockConfig?.baseTime ?? 0);
 
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
   const [newNickname, setNewNickname] = React.useState(nickname);
   const [isEditingNickname, setIsEditingNickname] = React.useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
+  const [showRefreshConfirm, setShowRefreshConfirm] = React.useState(false);
 
   // Sincronización única al montar el componente
   useEffect(() => {
     subscribeToRoom();
   }, [subscribeToRoom]);
+
+  // Clock tick interval - runs every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      clockTick();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [clockTick]);
 
   // Update lastSeen timestamp periodically and handle cleanup
   useEffect(() => {
@@ -134,20 +155,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <MessageCircle className="w-7 h-7" />
       </button>
 
-      {/* Chat Privado con GM (Solo para jugadores) */}
-      {!isGM && (
-        <button
-          onClick={() => {
-            setActiveChannel(`private_${userId}`);
-            toggleChat();
-          }}
-          className="fixed bottom-6 right-24 w-10 h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 z-50 ring-2 ring-neutral-900"
-          title="Chat Privado con GM"
-        >
-          <ShieldAlert className="w-5 h-5" />
-        </button>
-      )}
-
       {/* MODALES */}
       {isChatOpen && <ChatModal />}
 
@@ -161,7 +168,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         >
           <div className="space-y-4">
             {/* Nickname Edit Section */}
-            <div className="bg-neutral-800/50 p-4 rounded-lg border border-neutral-700">
+            <div className="bg-transparent p-4 rounded-lg border border-neutral-700">
               {isEditingNickname ? (
                 <div className="flex flex-col gap-2">
                   <input
@@ -188,46 +195,49 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                           setIsEditingNickname(false);
                         }
                       }}
-                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex-1 transition-colors"
+                      className="bg-red-600 hover:bg-red-700 text-white px-1 py-1 rounded-lg text-sm font-bold flex-1 transition-colors"
                     >
                       Guardar
                     </button>
                     <button
                       onClick={() => setIsEditingNickname(false)}
-                      className="bg-neutral-700 hover:bg-neutral-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex-1 transition-colors"
+                      className="bg-neutral-700 hover:bg-neutral-600 text-white px-1 py-1 rounded-lg text-sm font-bold flex-1 transition-colors"
                     >
                       Cancelar
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-neutral-400">
-                    Nickname actual:
+                <div className="flex items-center justify-start">
+                  <span className="gap-4 text-sm text-neutral-400">
+                    Nickname:
                   </span>
-                  <span className="font-bold text-white">{nickname}</span>
+                  <span className="font-bold text-white gap-4">{nickname}</span>
                 </div>
               )}
             </div>
 
             {/* Actions Grid */}
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-4">
               {!isEditingNickname && (
                 <button
                   onClick={() => setIsEditingNickname(true)}
-                  className="flex items-center gap-3 w-full p-4 bg-neutral-800 hover:bg-neutral-700 rounded-xl transition-all group"
+                  className="flex items-center gap-4 p-2 bg-neutral-800 hover:bg-neutral-700 rounded-xl transition-all group"
                 >
-                  <UserPen className="text-red-500 group-hover:scale-110 transition-transform" />
+                  <UserPen className="text-red-500 group-hover:scale-150 transition-transform duration-500" />
                   <span className="font-medium">Cambiar Nickname</span>
                 </button>
               )}
 
               <button
-                onClick={() => window.location.reload()}
-                className="flex items-center gap-3 w-full p-4 bg-neutral-800 hover:bg-neutral-700 rounded-xl transition-all group"
+                onClick={() => {
+                  setIsUserMenuOpen(false);
+                  setShowRefreshConfirm(true);
+                }}
+                className="flex items-center gap-4 p-2 bg-neutral-800 hover:bg-neutral-700 rounded-xl transition-all group"
               >
                 <RefreshCw className="text-red-500 group-hover:rotate-180 transition-transform duration-500" />
-                <span className="font-medium">Refrescar Sistema</span>
+                <span className="font-medium">Refrescar</span>
               </button>
 
               <button
@@ -235,10 +245,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   setIsUserMenuOpen(false);
                   setShowLogoutConfirm(true);
                 }}
-                className="flex items-center gap-3 w-full p-4 bg-red-900/20 hover:bg-red-900/40 border border-red-900/30 rounded-xl transition-all group"
+                className="flex items-center gap-4 p-2 bg-neutral-800 hover:bg-neutral-700 rounded-xl transition-all group"
               >
-                <LogOut className="text-red-500 group-hover:translate-x-1 transition-transform" />
-                <span className="font-medium text-red-500">Cerrar Sesión</span>
+                <LogOut className="text-red-500 group-hover:translate-x-2 transition-transform duration-500" />
+                <span className="font-medium">Cerrar Sesión</span>
               </button>
             </div>
           </div>
@@ -247,33 +257,31 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
       {/* LOGOUT CONFIRMATION MODAL */}
       {showLogoutConfirm && (
-        <ModalWrapper
-          title="Confirmación"
-          onClose={() => setShowLogoutConfirm(false)}
-        >
-          <div className="space-y-6">
-            <p className="text-neutral-300 text-center text-lg">
-              ¿Seguro que quieres desconectarte?
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setCurrentView("login");
-                  setShowLogoutConfirm(false);
-                }}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold transition-colors"
-              >
-                Sí, salir
-              </button>
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white px-6 py-3 rounded-lg font-bold transition-colors"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </ModalWrapper>
+        <ConfirmModal
+          title="Cerrar Sesión"
+          message="¿Seguro que quieres desconectarte?"
+          confirmText="Sí, salir"
+          cancelText="Mejor me quedo"
+          variant="warning"
+          onConfirm={() => {
+            setCurrentView("login");
+            setShowLogoutConfirm(false);
+          }}
+          onCancel={() => setShowLogoutConfirm(false)}
+        />
+      )}
+
+      {/* REFRESH CONFIRMATION MODAL */}
+      {showRefreshConfirm && (
+        <ConfirmModal
+          title="Refrescar Página"
+          message="¿Refrescar la página? Cualquier dato no guardado se perderá."
+          confirmText="Refrescar"
+          cancelText="Cancelar"
+          variant="info"
+          onConfirm={() => window.location.reload()}
+          onCancel={() => setShowRefreshConfirm(false)}
+        />
       )}
     </div>
   );
