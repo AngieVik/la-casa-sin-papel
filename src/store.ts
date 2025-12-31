@@ -15,6 +15,7 @@ import {
   update,
   remove,
   get as firebaseGet,
+  onDisconnect,
 } from "firebase/database";
 import { signInAnonymously, onAuthStateChanged } from "firebase/auth";
 
@@ -183,11 +184,15 @@ export const useStore = create<AppStore>((set, get) => ({
         isGM,
         status: "online",
         ready: false,
-        role: isGM ? "Director" : "Agente",
+        role: isGM ? "Director" : "Player",
         playerStates: [],
         publicStates: [],
         lastSeen: Date.now(),
       });
+
+      // Clear typing status on disconnect
+      const typingRef = ref(db, `${ROOM_REF}/typing`);
+      onDisconnect(typingRef).remove();
 
       if (isGM) {
         get().cleanupOldPlayers();

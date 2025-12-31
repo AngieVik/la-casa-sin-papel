@@ -62,11 +62,27 @@ const UIPlayer: React.FC = () => {
     name: string;
   } | null>(null);
 
-  // Notification history
+  // Notification history with localStorage persistence
   const [notificationHistory, setNotificationHistory] = useState<
     NotificationHistoryItem[]
-  >([]);
+  >(() => {
+    // Load from localStorage on init
+    try {
+      const saved = localStorage.getItem("notificationHistory");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [showHistory, setShowHistory] = useState(false);
+
+  // Save notification history to localStorage
+  useEffect(() => {
+    localStorage.setItem(
+      "notificationHistory",
+      JSON.stringify(notificationHistory)
+    );
+  }, [notificationHistory]);
 
   // Audio refs for all sounds
   const audioRefs = useRef<Record<string, HTMLAudioElement | null>>({});
@@ -101,12 +117,16 @@ const UIPlayer: React.FC = () => {
         case "sound":
           const soundId = notification.payload.soundId || "gong";
           const audioEl = audioRefs.current[soundId];
-          if (audioEl) {
-            audioEl.currentTime = 0;
-            audioEl.play().catch(console.error);
-          }
           const soundInfo = SOUNDS[soundId];
-          if (soundInfo) {
+
+          if (audioEl && soundInfo) {
+            audioEl.currentTime = 0;
+            audioEl.play().catch((err) => {
+              console.warn(`Failed to play sound ${soundId}:`, err);
+              // Show toast even if audio fails
+              setSoundToast({ emoji: "🔇", name: `${soundInfo.name} (error)` });
+              setTimeout(() => setSoundToast(null), 2500);
+            });
             setSoundToast(soundInfo);
             setTimeout(() => setSoundToast(null), 2500);
             addToHistory("sound", `${soundInfo.emoji} ${soundInfo.name}`);

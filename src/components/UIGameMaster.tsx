@@ -55,7 +55,6 @@ const UIGameMaster: React.FC = () => {
   const currentGlobalState = useStore((state) => state.room.globalState);
 
   // Calculate clock time locally
-  const timeString = useGameClock(clockConfig);
 
   // Store actions
   const gmUpdateTicker = useStore((state) => state.gmUpdateTicker);
@@ -149,6 +148,9 @@ const UIGameMaster: React.FC = () => {
     value: string;
   } | null>(null);
 
+  // GM Toast for action confirmations
+  const [gmToast, setGmToast] = useState<string | null>(null);
+
   // Clock buffer state
   const [localTime, setLocalTime] = useState(
     formatTimeToMMSS(clockConfig.baseTime)
@@ -197,6 +199,12 @@ const UIGameMaster: React.FC = () => {
     setShowEndSessionConfirm(false);
   };
 
+  // Toast helper for GM action confirmations
+  const showGmToastMsg = (msg: string) => {
+    setGmToast(msg);
+    setTimeout(() => setGmToast(null), 2500);
+  };
+
   const handleTickerUpdate = () => {
     gmUpdateTicker(localTicker);
   };
@@ -233,6 +241,15 @@ const UIGameMaster: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto animate-in fade-in duration-500">
+      {/* GM Toast Confirmation */}
+      {gmToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top fade-in duration-300">
+          <div className="px-6 py-3 bg-gradient-to-r from-green-900/90 to-emerald-900/90 border border-green-500/50 rounded-full shadow-2xl shadow-green-500/30 flex items-center gap-3">
+            <span className="text-white font-bold">{gmToast}</span>
+          </div>
+        </div>
+      )}
+
       {/* --- GM Header / Tabs --- */}
       <div className="flex md:flex-row items-center justify-between mb-6 gap-2 border-b border-neutral-800 pb-4">
         <div>
@@ -381,6 +398,13 @@ const UIGameMaster: React.FC = () => {
                             ))}
                           </div>
                         )}
+                        {/* Private states indicator */}
+                        {(player.playerStates || []).length > 0 && (
+                          <span className="text-[10px] text-purple-400 font-mono">
+                            🔒 {(player.playerStates || []).length} estado(s)
+                            privado(s)
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -470,7 +494,12 @@ const UIGameMaster: React.FC = () => {
                         </div>
                       </div>
                       {isSelected && (
-                        <div className="mt-2 text-xs text-green-500 font-mono uppercase"></div>
+                        <div className="absolute top-1 right-1">
+                          <CheckCircle2
+                            size={16}
+                            className="text-green-400 animate-pulse"
+                          />
+                        </div>
                       )}
                     </button>
                   );
@@ -707,6 +736,11 @@ const UIGameMaster: React.FC = () => {
                         key={sound.id}
                         onClick={() => {
                           gmSendSound(null, sound.id);
+                          showGmToastMsg(
+                            `✅ ${sound.emoji} ${sound.name} enviado a ${
+                              players.filter((p) => !p.isGM).length
+                            } jugadores`
+                          );
                           setShowGlobalSoundDropdown(false);
                         }}
                         className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-pink-900/30 hover:text-pink-400 transition-colors"
@@ -741,6 +775,11 @@ const UIGameMaster: React.FC = () => {
                     <button
                       onClick={() => {
                         gmSendVibration(null, 10);
+                        showGmToastMsg(
+                          `📳 Vibración débil enviada a ${
+                            players.filter((p) => !p.isGM).length
+                          } jugadores`
+                        );
                         setShowGlobalVibrationDropdown(false);
                       }}
                       className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-orange-900/30 hover:text-orange-400 transition-colors"
@@ -750,6 +789,11 @@ const UIGameMaster: React.FC = () => {
                     <button
                       onClick={() => {
                         gmSendVibration(null, 100);
+                        showGmToastMsg(
+                          `📳 Vibración media enviada a ${
+                            players.filter((p) => !p.isGM).length
+                          } jugadores`
+                        );
                         setShowGlobalVibrationDropdown(false);
                       }}
                       className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-orange-900/30 hover:text-orange-400 transition-colors"
@@ -759,6 +803,11 @@ const UIGameMaster: React.FC = () => {
                     <button
                       onClick={() => {
                         gmSendVibration(null, 200);
+                        showGmToastMsg(
+                          `📳 Vibración fuerte enviada a ${
+                            players.filter((p) => !p.isGM).length
+                          } jugadores`
+                        );
                         setShowGlobalVibrationDropdown(false);
                       }}
                       className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-orange-900/30 hover:text-orange-400 transition-colors"
@@ -1531,6 +1580,11 @@ const UIGameMaster: React.FC = () => {
                 onClick={async () => {
                   if (globalMessageText.trim()) {
                     await gmSendGlobalMessage(globalMessageText);
+                    showGmToastMsg(
+                      `📢 Mensaje global enviado a ${
+                        players.filter((p) => !p.isGM).length
+                      } jugadores`
+                    );
                     setGlobalMessageText("");
                     setShowGlobalMessageModal(false);
                   }

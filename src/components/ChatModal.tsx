@@ -44,6 +44,7 @@ const ChatModal: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>("global");
   const [messageText, setMessageText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Create room modal state
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
@@ -386,14 +387,28 @@ const ChatModal: React.FC = () => {
               value={messageText}
               onChange={(e) => {
                 setMessageText(e.target.value);
-                // Set typing status
+
+                // Debounced typing indicator (400ms)
+                if (typingTimeoutRef.current) {
+                  clearTimeout(typingTimeoutRef.current);
+                }
+
                 if (e.target.value.trim()) {
                   setTyping(getChannelName(), true);
+                  // Auto-clear typing after 3 seconds of inactivity
+                  typingTimeoutRef.current = setTimeout(() => {
+                    setTyping(getChannelName(), false);
+                  }, 3000);
                 } else {
                   setTyping(getChannelName(), false);
                 }
               }}
-              onBlur={() => setTyping(getChannelName(), false)}
+              onBlur={() => {
+                if (typingTimeoutRef.current) {
+                  clearTimeout(typingTimeoutRef.current);
+                }
+                setTyping(getChannelName(), false);
+              }}
               className="flex-1 bg-neutral-900 text-white px-4 py-3 rounded-xl border border-neutral-700 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-sm font-mono placeholder:text-neutral-600 transition-all"
             />
             <button
