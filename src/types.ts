@@ -59,8 +59,9 @@ export interface RoomState {
   tickerText: string;
   clockConfig: {
     mode: "static" | "countdown" | "stopwatch";
-    baseTime: number; // Tiempo base en segundos (lo que se ve)
+    baseTime: number; // Tiempo acumulado en segundos
     isRunning: boolean; // Si el reloj está corriendo
+    startTime: number | null; // Timestamp de cuando se inició (null si pausado/estático)
   };
   tickerSpeed: number; // Velocidad en segundos del ciclo
   channels: Record<string, ChatMessage[]>; // { global: [], private_uid: [], room_name: [] }
@@ -116,7 +117,6 @@ export interface AppStore {
   gmResetClock: () => void;
   gmSetStaticTime: (timeString: string) => void;
   gmSetTickerSpeed: (speed: number) => void;
-  clockTick: () => void;
   gmKickPlayer: (playerId: string) => Promise<void>;
   gmRemovePlayer: (playerId: string) => Promise<void>;
   gmUpdatePlayerState: (

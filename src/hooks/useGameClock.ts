@@ -1,76 +1,74 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface ClockConfig {
   mode: "static" | "countdown" | "stopwatch";
-  baseTime: number; // Tiempo base en segundos
-  startTime: number | null; // Timestamp de cuando se dio a play
-  pausedAt: number | null; // Timestamp de cuando se pausó
+  baseTime: number; // Tiempo acumulado en segundos
+  isRunning: boolean;
+  startTime: number | null; // Timestamp de inicio (null si pausado)
 }
 
 /**
- * Hook para calcular el tiempo del reloj en tiempo real sin actualizar Firebase constantemente.
- * Funciona como un reloj de tablero deportivo.
+ * Hook para calcular el tiempo del reloj en tiempo real sin actualizar Firebase.
+ * Funciona como un reloj de tablero deportivo: calcula localmente basándose en timestamps.
  */
 export function useGameClock(config: ClockConfig): string {
-  // Asegurarse de que config nunca es undefined para evitar crash inicial
+  // Safe defaults
   const safeConfig = config || {
-    mode: "static",
+    mode: "static" as const,
     baseTime: 0,
+    isRunning: false,
     startTime: null,
-    pausedAt: null,
   };
 
-  const [currentTime, setCurrentTime] = useState(() =>
-    calculateTime(safeConfig)
+  const [displayTime, setDisplayTime] = useState(() =>
+    calculateDisplayTime(safeConfig)
   );
 
+  // Use ref to access latest config in interval without re-creating it
+  const configRef = useRef(safeConfig);
+  configRef.current = safeConfig;
+
   useEffect(() => {
-    // Si el reloj está pausado o es estático, no necesitamos intervalo
-    if (safeConfig.mode === "static" || safeConfig.startTime === null) {
-      setCurrentTime(calculateTime(safeConfig));
+    // Calculate immediately on config change
+    setDisplayTime(calculateDisplayTime(safeConfig));
+
+    // If not running, no need for interval
+    if (!safeConfig.isRunning || safeConfig.startTime === null) {
       return;
     }
 
-    // Actualizar cada segundo para countdown y stopwatch activos
+    // Update every second while running
     const interval = setInterval(() => {
-      setCurrentTime(calculateTime(safeConfig));
+      setDisplayTime(calculateDisplayTime(configRef.current));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [safeConfig]);
+  }, [
+    safeConfig.mode,
+    safeConfig.baseTime,
+    safeConfig.isRunning,
+    safeConfig.startTime,
+  ]);
 
-  return currentTime;
+  return displayTime;
 }
 
 /**
- * Calcula el tiempo actual basado en la configuración
+ * Calcula el tiempo a mostrar basado en la configuración actual
  */
-function calculateTime(config: ClockConfig): string {
-  const { mode, baseTime, startTime, pausedAt } = config;
+function calculateDisplayTime(config: ClockConfig): string {
+  const { mode, baseTime, isRunning, startTime } = config;
 
-  // Protección contra NaN en baseTime
+  // Protección contra NaN
   const safeBaseTime = isNaN(baseTime) ? 0 : baseTime;
 
-  // Modo estático: simplemente muestra baseTime
-  if (mode === "static") {
+  // Modo estático o pausado: mostrar baseTime directamente
+  if (mode === "static" || !isRunning || startTime === null) {
     return formatTime(safeBaseTime);
   }
 
-  // Calcular tiempo transcurrido
-  let elapsedSeconds = 0;
-
-  if (startTime !== null) {
-    if (pausedAt !== null) {
-      // Está pausado: usar el tiempo hasta la pausa
-      elapsedSeconds = (pausedAt - startTime) / 1000;
-    } else {
-      // Está corriendo: calcular desde startTime hasta ahora
-      elapsedSeconds = (Date.now() - startTime) / 1000;
-    }
-  }
-
-  // Protección contra NaN en elapsedSeconds
-  if (isNaN(elapsedSeconds)) elapsedSeconds = 0;
+  // Calcular tiempo transcurrido desde startTime
+  const elapsedSeconds = (Date.now() - startTime) / 1000;
 
   if (mode === "countdown") {
     // Cuenta atrás: baseTime - tiempo transcurrido (mínimo 0)
@@ -88,10 +86,10 @@ function calculateTime(config: ClockConfig): string {
 }
 
 /**
- * Formatea segundos a formato "MM:SS" para mostrar tiempo del juego
+ * Formatea segundos a formato "MM:SS"
  */
 function formatTime(totalSeconds: number): string {
-  if (isNaN(totalSeconds)) return "00:00"; // Fallback final
+  if (isNaN(totalSeconds) || totalSeconds < 0) return "00:00";
 
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = Math.floor(totalSeconds % 60);
@@ -105,7 +103,7 @@ function formatTime(totalSeconds: number): string {
  * Formatea segundos a formato "MM:SS" para input de texto
  */
 export function formatTimeToMMSS(totalSeconds: number): string {
-  if (isNaN(totalSeconds)) return "00:00"; // Fallback final
+  if (isNaN(totalSeconds)) return "00:00";
 
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = Math.floor(totalSeconds % 60);

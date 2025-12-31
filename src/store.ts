@@ -26,6 +26,7 @@ const DEFAULT_CLOCK_CONFIG = {
   mode: "static" as const,
   baseTime: 0,
   isRunning: false,
+  startTime: null as number | null,
 };
 
 export const useStore = create<AppStore>((set, get) => ({
@@ -394,10 +395,12 @@ export const useStore = create<AppStore>((set, get) => ({
     // Prevent starting countdown if already at 0
     if (mode === "countdown" && config.baseTime <= 0) return;
 
+    // Start the clock with current timestamp
     const newConfig = {
       mode,
       baseTime: config.baseTime,
       isRunning: true,
+      startTime: Date.now(),
     };
 
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
@@ -407,11 +410,24 @@ export const useStore = create<AppStore>((set, get) => ({
     const { room } = get();
     const config = room.clockConfig || DEFAULT_CLOCK_CONFIG;
 
-    if (!config.isRunning) return;
+    if (!config.isRunning || config.startTime === null) return;
+
+    // Calculate elapsed time since start
+    const elapsedSeconds = (Date.now() - config.startTime) / 1000;
+
+    // Calculate new baseTime depending on mode
+    let newBaseTime = config.baseTime;
+    if (config.mode === "countdown") {
+      newBaseTime = Math.max(0, config.baseTime - elapsedSeconds);
+    } else if (config.mode === "stopwatch") {
+      newBaseTime = config.baseTime + elapsedSeconds;
+    }
 
     const newConfig = {
-      ...config,
+      mode: config.mode,
+      baseTime: Math.floor(newBaseTime),
       isRunning: false,
+      startTime: null,
     };
 
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
@@ -440,39 +456,9 @@ export const useStore = create<AppStore>((set, get) => ({
       mode: "static" as const,
       baseTime: totalSeconds,
       isRunning: false,
+      startTime: null,
     };
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
-  },
-
-  // --- NEW: Tick action called every second ---
-  clockTick: () => {
-    const { room, user } = get();
-    const config = room.clockConfig || DEFAULT_CLOCK_CONFIG;
-
-    // Only GM should tick to Firebase to avoid conflicts
-    if (!user.isGM) return;
-    if (!config.isRunning) return;
-
-    let newBaseTime = config.baseTime;
-
-    if (config.mode === "stopwatch") {
-      newBaseTime = config.baseTime + 1;
-      // Loop back at 99:59 (5999s)
-      if (newBaseTime >= 6000) newBaseTime = 0;
-    } else if (config.mode === "countdown") {
-      newBaseTime = config.baseTime - 1;
-      if (newBaseTime <= 0) {
-        // Stop at 0
-        update(ref(db, ROOM_REF), {
-          clockConfig: { ...config, baseTime: 0, isRunning: false },
-        });
-        return;
-      }
-    }
-
-    update(ref(db, ROOM_REF), {
-      clockConfig: { ...config, baseTime: newBaseTime },
-    });
   },
 
   gmSetTickerSpeed: (speed: number) => {

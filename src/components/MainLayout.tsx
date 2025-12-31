@@ -13,17 +13,7 @@ import ModalWrapper from "./ModalWrapper";
 import ConfirmModal from "./ConfirmModal";
 import { ref, update as firebaseUpdate } from "firebase/database";
 import { db } from "../firebaseConfig";
-
-// Simple format function
-const formatTime = (totalSeconds: number): string => {
-  if (isNaN(totalSeconds)) return "00:00";
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = Math.floor(totalSeconds % 60);
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
-    2,
-    "0"
-  )}`;
-};
+import { useGameClock } from "../hooks/useGameClock";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -43,10 +33,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isGM = useStore((state) => state.user.isGM);
   const tickerSpeed = useStore((state) => state.room.tickerSpeed);
   const setActiveChannel = useStore((state) => state.setActiveChannel);
-  const clockTick = useStore((state) => state.clockTick);
 
-  // Format baseTime directly - no complex calculation needed
-  const timeString = formatTime(clockConfig?.baseTime ?? 0);
+  // Calculate clock time locally using the passive hook
+  const timeString = useGameClock(clockConfig);
 
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
   const [newNickname, setNewNickname] = React.useState(nickname);
@@ -58,14 +47,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   useEffect(() => {
     subscribeToRoom();
   }, [subscribeToRoom]);
-
-  // Clock tick interval - runs every second
-  useEffect(() => {
-    const interval = setInterval(() => {
-      clockTick();
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [clockTick]);
 
   // Update lastSeen timestamp periodically and handle cleanup
   useEffect(() => {
