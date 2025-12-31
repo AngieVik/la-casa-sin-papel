@@ -16,9 +16,28 @@ export interface Player {
   ready: boolean;
   status: "online" | "offline";
   role?: string;
-  playerState?: string; // Estado privado (solo GM ve)
-  publicState?: string; // Estado visible para todos
+  playerStates?: string[]; // Estados privados (solo GM ve) - múltiples
+  publicStates?: string[]; // Estados visibles para todos - múltiples
   lastSeen?: number; // Timestamp de última actividad
+}
+
+export interface ChatRoom {
+  id: string;
+  name: string;
+  playerIds: string[];
+  createdAt: number;
+}
+
+export interface PlayerNotification {
+  id: string;
+  type: "sound" | "vibration" | "divineVoice" | "globalMessage";
+  payload: {
+    soundId?: string;
+    intensity?: number; // ms for vibration
+    message?: string;
+  };
+  targetPlayerId?: string; // undefined = todos los players
+  timestamp: number;
 }
 
 export interface ChatMessage {
@@ -49,6 +68,11 @@ export interface RoomState {
   globalStates: string[]; // Estados globales (Día, Noche, etc.)
   playerStates: string[]; // Estados personales (Envenenado, etc.)
   publicStates: string[]; // Estados públicos (Vivo, Muerto, etc.)
+  // Chat rooms y notificaciones
+  chatRooms: ChatRoom[];
+  notifications: PlayerNotification[];
+  // Typing indicators: { channelName: { oderId: timestamp } }
+  typing: Record<string, Record<string, number>>;
 }
 
 export interface UIState {
@@ -97,11 +121,12 @@ export interface AppStore {
   gmRemovePlayer: (playerId: string) => Promise<void>;
   gmUpdatePlayerState: (
     playerId: string,
-    playerState: string,
-    publicState: string
+    playerStates: string[],
+    publicStates: string[]
   ) => Promise<void>;
   gmWhisper: (playerId: string, text: string) => Promise<void>;
   gmResetRoom: () => Promise<void>;
+  gmUpdatePlayerRole: (playerId: string, role: string) => Promise<void>;
 
   // State Management Actions
   gmAddGlobalState: (state: string) => void;
@@ -113,7 +138,26 @@ export interface AppStore {
   gmAddPublicStateOption: (state: string) => void;
   gmEditPublicStateOption: (oldState: string, newState: string) => void;
   gmDeletePublicStateOption: (state: string) => void;
-  gmAssignPlayerState: (playerId: string, state: string) => Promise<void>;
-  gmAssignPublicState: (playerId: string, state: string) => Promise<void>;
+  gmTogglePlayerState: (playerId: string, state: string) => Promise<void>;
+  gmTogglePublicState: (playerId: string, state: string) => Promise<void>;
   gmSelectGame: (gameId: string) => Promise<void>;
+
+  // Notification Actions
+  gmSendGlobalMessage: (text: string) => Promise<void>;
+  gmSendSound: (playerId: string | null, soundId: string) => Promise<void>;
+  gmSendVibration: (
+    playerId: string | null,
+    intensity: number
+  ) => Promise<void>;
+  gmSendDivineVoice: (playerId: string | null, text: string) => Promise<void>;
+  clearNotification: (notificationId: string) => Promise<void>;
+
+  // Chat Room Actions
+  gmCreateChatRoom: (name: string, playerIds: string[]) => Promise<void>;
+  gmAddPlayerToRoom: (roomId: string, playerId: string) => Promise<void>;
+  gmRemovePlayerFromRoom: (roomId: string, playerId: string) => Promise<void>;
+  gmCloseChatRoom: (roomId: string) => Promise<void>;
+
+  // Typing indicator
+  setTyping: (channel: string, isTyping: boolean) => void;
 }

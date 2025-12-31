@@ -63,8 +63,8 @@ const LoginView: React.FC = () => {
         <h1 className="text-4xl font-black text-white uppercase tracking-tighter">
           La Casa <span className="text-red-500">Sin Papel</span>
         </h1>
-        <p className="text-neutral-400 text-sm font-mono mt-2 tracking-widest uppercase">
-          Sistema de Gestión Táctica
+        <p className="text-neutral-400 text-sm font-mono mt-2 tracking-widest">
+          La gente nunca sospechara de ti....
         </p>
       </div>
 
@@ -79,8 +79,8 @@ const LoginView: React.FC = () => {
         <div className="space-y-6 relative z-10">
           {/* Nickname Input */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider ml-1">
-              Alias Operativo
+            <label className="text-xs font-bold text-neutral-500 tracking-wider ml-1">
+              ¿Por quien te haras pasar hoy?
             </label>
             <div className="relative group/input">
               <User
@@ -91,7 +91,7 @@ const LoginView: React.FC = () => {
                 type="text"
                 value={localNick}
                 onChange={(e) => setLocalNick(e.target.value)}
-                placeholder="Introduce tu alias..."
+                placeholder="..."
                 disabled={isLoading}
                 className="w-full bg-neutral-950 border border-neutral-700 text-white pl-12 pr-4 py-4 rounded-xl focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all placeholder:text-neutral-700 font-mono"
               />
@@ -124,7 +124,7 @@ const LoginView: React.FC = () => {
                     : "text-neutral-400 group-hover/check:text-neutral-300"
                 }`}
               >
-                Acceso Director (GM)
+                GameMaster
               </span>
             </label>
           </div>
@@ -132,8 +132,8 @@ const LoginView: React.FC = () => {
           {/* Password Input (Conditional) */}
           {isGMMode && (
             <div className="space-y-2 animate-in slide-in-from-top-2 fade-in duration-300">
-              <label className="text-xs font-bold text-red-500 uppercase tracking-wider ml-1 flex items-center gap-1">
-                <ShieldAlert size={12} /> Código de Seguridad
+              <label className="text-xs font-bold text-red-500 tracking-wider ml-1 flex items-center gap-1">
+                <ShieldAlert size={12} /> Introduce el codigo encriptado cifrado de extremo a extremo, con todos los caracteres alfanumericos.
               </label>
               <div className="relative group/input">
                 <Lock
@@ -165,7 +165,7 @@ const LoginView: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full py-4 rounded-xl font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all transform active:scale-95 shadow-lg
+            className={`w-full py-4 rounded-xl font-bold tracking-wider flex items-center justify-center gap-2 transition-all transform active:scale-95 shadow-lg
                     ${isLoading ? "opacity-70 cursor-not-allowed" : ""}
                     ${
                       isGMMode
@@ -179,7 +179,7 @@ const LoginView: React.FC = () => {
               </>
             ) : (
               <>
-                {isGMMode ? "Autenticar" : "Ingresar"} <ArrowRight size={20} />
+                {isGMMode ? "Identificar" : "Entrar"} <ArrowRight size={20} />
               </>
             )}
           </button>

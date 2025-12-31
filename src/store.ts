@@ -1,5 +1,11 @@
 import { create } from "zustand";
-import { AppStore, Player, ChatMessage } from "./types";
+import {
+  AppStore,
+  Player,
+  ChatMessage,
+  ChatRoom,
+  PlayerNotification,
+} from "./types";
 import { db, auth } from "./firebaseConfig";
 import {
   ref,
@@ -41,6 +47,9 @@ export const useStore = create<AppStore>((set, get) => ({
     globalStates: ["Día", "Noche"],
     playerStates: ["Envenenado", "Peruano", "De Viator"],
     publicStates: ["Vivo", "Muerto", "Carcel"],
+    chatRooms: [],
+    notifications: [],
+    typing: {},
   },
   ui: {
     isChatOpen: false,
@@ -175,8 +184,8 @@ export const useStore = create<AppStore>((set, get) => ({
         status: "online",
         ready: false,
         role: isGM ? "Director" : "Agente",
-        playerState: "",
-        publicState: "",
+        playerStates: [],
+        publicStates: [],
         lastSeen: Date.now(),
       });
 
@@ -272,6 +281,23 @@ export const useStore = create<AppStore>((set, get) => ({
                 "De Viator",
               ],
               publicStates: data.publicStates || ["Vivo", "Muerto", "Carcel"],
+              chatRooms: data.chatRooms
+                ? Object.entries(data.chatRooms).map(
+                    ([key, val]: [string, unknown]) => ({
+                      id: key,
+                      ...(val as Omit<ChatRoom, "id">),
+                    })
+                  )
+                : [],
+              notifications: data.notifications
+                ? Object.entries(data.notifications).map(
+                    ([key, val]: [string, unknown]) => ({
+                      id: key,
+                      ...(val as Omit<PlayerNotification, "id">),
+                    })
+                  )
+                : [],
+              typing: data.typing || {},
             },
             ui: {
               ...state.ui,
@@ -481,11 +507,11 @@ export const useStore = create<AppStore>((set, get) => ({
 
   gmUpdatePlayerState: async (
     playerId: string,
-    playerState: string,
-    publicState: string
+    playerStates: string[],
+    publicStates: string[]
   ) => {
     const playerRef = ref(db, `${ROOM_REF}/players/${playerId}`);
-    await update(playerRef, { playerState, publicState });
+    await update(playerRef, { playerStates, publicStates });
   },
 
   gmWhisper: async (playerId: string, text: string) => {
@@ -514,19 +540,29 @@ export const useStore = create<AppStore>((set, get) => ({
       status: "waiting",
       channels: null,
       votes: null,
+      // Clear chat rooms and notifications
+      chatRooms: null,
+      notifications: null,
       // Esto sobrescribe CUALQUIER error en la base de datos
       clockConfig: safeClockConfig,
       globalState: "Arrancando sesión...",
       ticker: "Sistema reiniciado. Mantengan la calma.",
     };
 
+    // Reset ALL player data
     room.players.forEach((p) => {
       updates[`players/${p.id}/ready`] = false;
-      updates[`players/${p.id}/playerState`] = "";
-      updates[`players/${p.id}/publicState`] = "";
+      updates[`players/${p.id}/playerStates`] = [];
+      updates[`players/${p.id}/publicStates`] = [];
+      updates[`players/${p.id}/role`] = "Player";
     });
 
     await update(ref(db, ROOM_REF), updates);
+  },
+
+  // --- Update Player Role ---
+  gmUpdatePlayerRole: async (playerId: string, role: string) => {
+    await update(ref(db, `${ROOM_REF}/players/${playerId}`), { role });
   },
 
   // --- State Management Actions ---
@@ -590,17 +626,148 @@ export const useStore = create<AppStore>((set, get) => ({
     update(ref(db, ROOM_REF), { publicStates: newStates });
   },
 
-  gmAssignPlayerState: async (playerId: string, state: string) => {
+  gmTogglePlayerState: async (playerId: string, state: string) => {
+    const { room } = get();
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player) return;
+
+    const currentStates = player.playerStates || [];
+    let newStates: string[];
+
+    if (currentStates.includes(state)) {
+      newStates = currentStates.filter((s) => s !== state);
+    } else {
+      newStates = [...currentStates, state];
+    }
+
     const playerRef = ref(db, `${ROOM_REF}/players/${playerId}`);
-    await update(playerRef, { playerState: state });
+    await update(playerRef, { playerStates: newStates });
   },
 
-  gmAssignPublicState: async (playerId: string, state: string) => {
+  gmTogglePublicState: async (playerId: string, state: string) => {
+    const { room } = get();
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player) return;
+
+    const currentStates = player.publicStates || [];
+    let newStates: string[];
+
+    if (currentStates.includes(state)) {
+      newStates = currentStates.filter((s) => s !== state);
+    } else {
+      newStates = [...currentStates, state];
+    }
+
     const playerRef = ref(db, `${ROOM_REF}/players/${playerId}`);
-    await update(playerRef, { publicState: state });
+    await update(playerRef, { publicStates: newStates });
   },
 
   gmSelectGame: async (gameId: string) => {
     await update(ref(db, ROOM_REF), { gameSelected: gameId });
+  },
+
+  // --- Notification Actions ---
+  gmSendGlobalMessage: async (text: string) => {
+    const { user } = get();
+    if (!user.id) return;
+
+    const notificationRef = ref(db, `${ROOM_REF}/notifications`);
+    await push(notificationRef, {
+      type: "globalMessage",
+      payload: { message: text },
+      targetPlayerId: null,
+      timestamp: Date.now(),
+    });
+  },
+
+  gmSendSound: async (playerId: string | null, soundId: string) => {
+    const notificationRef = ref(db, `${ROOM_REF}/notifications`);
+    await push(notificationRef, {
+      type: "sound",
+      payload: { soundId },
+      targetPlayerId: playerId,
+      timestamp: Date.now(),
+    });
+  },
+
+  gmSendVibration: async (playerId: string | null, intensity: number) => {
+    const notificationRef = ref(db, `${ROOM_REF}/notifications`);
+    await push(notificationRef, {
+      type: "vibration",
+      payload: { intensity },
+      targetPlayerId: playerId,
+      timestamp: Date.now(),
+    });
+  },
+
+  gmSendDivineVoice: async (playerId: string | null, text: string) => {
+    const notificationRef = ref(db, `${ROOM_REF}/notifications`);
+    await push(notificationRef, {
+      type: "divineVoice",
+      payload: { message: text },
+      targetPlayerId: playerId,
+      timestamp: Date.now(),
+    });
+  },
+
+  clearNotification: async (notificationId: string) => {
+    const notificationRef = ref(
+      db,
+      `${ROOM_REF}/notifications/${notificationId}`
+    );
+    await remove(notificationRef);
+  },
+
+  // --- Chat Room Actions ---
+  gmCreateChatRoom: async (name: string, playerIds: string[]) => {
+    const chatRoomsRef = ref(db, `${ROOM_REF}/chatRooms`);
+    await push(chatRoomsRef, {
+      name,
+      playerIds,
+      createdAt: Date.now(),
+    });
+  },
+
+  gmAddPlayerToRoom: async (roomId: string, playerId: string) => {
+    const { room } = get();
+    const chatRoom = room.chatRooms.find((r) => r.id === roomId);
+    if (!chatRoom) return;
+
+    const newPlayerIds = [...chatRoom.playerIds, playerId];
+    const roomRef = ref(db, `${ROOM_REF}/chatRooms/${roomId}`);
+    await update(roomRef, { playerIds: newPlayerIds });
+  },
+
+  gmRemovePlayerFromRoom: async (roomId: string, playerId: string) => {
+    const { room } = get();
+    const chatRoom = room.chatRooms.find((r) => r.id === roomId);
+    if (!chatRoom) return;
+
+    const newPlayerIds = chatRoom.playerIds.filter((id) => id !== playerId);
+    const roomRef = ref(db, `${ROOM_REF}/chatRooms/${roomId}`);
+    await update(roomRef, { playerIds: newPlayerIds });
+  },
+
+  gmCloseChatRoom: async (roomId: string) => {
+    const roomRef = ref(db, `${ROOM_REF}/chatRooms/${roomId}`);
+    await remove(roomRef);
+    // Also remove the channel messages
+    const channelRef = ref(db, `${ROOM_REF}/channels/room_${roomId}`);
+    await remove(channelRef);
+  },
+
+  // Typing indicator
+  setTyping: (channel: string, isTyping: boolean) => {
+    const { user } = get();
+    if (!user.id) return;
+
+    const typingRef = ref(db, `${ROOM_REF}/typing/${channel}/${user.id}`);
+    if (isTyping) {
+      // Set timestamp when typing
+      firebaseSet(typingRef, Date.now());
+    } else {
+      // Remove when stopped
+      remove(typingRef);
+    }
   },
 }));

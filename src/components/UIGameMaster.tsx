@@ -31,6 +31,7 @@ import {
   User,
   Eye,
   EyeOff,
+  Fingerprint,
 } from "lucide-react";
 import ModalWrapper from "./ModalWrapper";
 import ConfirmModal from "./ConfirmModal";
@@ -95,20 +96,40 @@ const UIGameMaster: React.FC = () => {
   const gmDeletePublicStateOption = useStore(
     (state) => state.gmDeletePublicStateOption
   );
-  const gmAssignPlayerState = useStore((state) => state.gmAssignPlayerState);
-  const gmAssignPublicState = useStore((state) => state.gmAssignPublicState);
+  const gmTogglePlayerState = useStore((state) => state.gmTogglePlayerState);
+  const gmTogglePublicState = useStore((state) => state.gmTogglePublicState);
+  const gmSendSound = useStore((state) => state.gmSendSound);
+  const gmSendVibration = useStore((state) => state.gmSendVibration);
+  const gmSendDivineVoice = useStore((state) => state.gmSendDivineVoice);
+  const gmSendGlobalMessage = useStore((state) => state.gmSendGlobalMessage);
+  const gmUpdatePlayerRole = useStore((state) => state.gmUpdatePlayerRole);
 
   // Local state
   const [localTicker, setLocalTicker] = useState(tickerText);
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
-  const [playerStateInput, setPlayerStateInput] = useState("");
-  const [publicStateInput, setPublicStateInput] = useState("");
   const [whisperText, setWhisperText] = useState("");
+  const [divineVoiceText, setDivineVoiceText] = useState("");
   const [showShutdownConfirm, setShowShutdownConfirm] = useState(false);
   const [showEndSessionConfirm, setShowEndSessionConfirm] = useState(false);
   const [showStartGameConfirm, setShowStartGameConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showExpelConfirm, setShowExpelConfirm] = useState(false);
+
+  // Player edit modal dropdowns
+  const [showPlayerStateDropdown, setShowPlayerStateDropdown] = useState(false);
+  const [showPublicStateDropdown, setShowPublicStateDropdown] = useState(false);
+  const [showSoundDropdown, setShowSoundDropdown] = useState(false);
+  const [showVibrationDropdown, setShowVibrationDropdown] = useState(false);
+
+  // Global actions modal state
+  const [showGlobalMessageModal, setShowGlobalMessageModal] = useState(false);
+  const [globalMessageText, setGlobalMessageText] = useState("");
+  const [showGlobalSoundDropdown, setShowGlobalSoundDropdown] = useState(false);
+  const [showGlobalVibrationDropdown, setShowGlobalVibrationDropdown] =
+    useState(false);
+  const [showGlobalDivineVoiceModal, setShowGlobalDivineVoiceModal] =
+    useState(false);
+  const [globalDivineVoiceText, setGlobalDivineVoiceText] = useState("");
 
   // State card editing
   const [editingState, setEditingState] = useState<{
@@ -190,23 +211,13 @@ const UIGameMaster: React.FC = () => {
   };
 
   const openPlayerEdit = (playerId: string) => {
-    const player = players.find((p) => p.id === playerId);
-    if (player) {
-      setPlayerStateInput(player.playerState || "");
-      setPublicStateInput(player.publicState || "");
-      setWhisperText("");
-      setEditingPlayer(playerId);
-    }
-  };
-
-  const handleSavePlayerState = async () => {
-    if (editingPlayer) {
-      await gmUpdatePlayerState(
-        editingPlayer,
-        playerStateInput,
-        publicStateInput
-      );
-    }
+    setWhisperText("");
+    setDivineVoiceText("");
+    setShowPlayerStateDropdown(false);
+    setShowPublicStateDropdown(false);
+    setShowSoundDropdown(false);
+    setShowVibrationDropdown(false);
+    setEditingPlayer(playerId);
   };
 
   const handleWhisper = async () => {
@@ -358,9 +369,16 @@ const UIGameMaster: React.FC = () => {
                         <div className="text-xs text-neutral-500 font-mono uppercase tracking-widest">
                           {player.role || "Sin Rol"}
                         </div>
-                        {player.publicState && (
-                          <div className="text-xs text-blue-400 mt-1">
-                            {player.publicState}
+                        {(player.publicStates || []).length > 0 && (
+                          <div className="text-xs text-blue-400 mt-1 flex flex-wrap gap-1">
+                            {(player.publicStates || []).map((state) => (
+                              <span
+                                key={state}
+                                className="bg-blue-900/30 px-1 rounded"
+                              >
+                                {state}
+                              </span>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -480,7 +498,13 @@ const UIGameMaster: React.FC = () => {
                 {globalStates.map((state) => (
                   <div key={state} className="relative group">
                     <button
-                      onClick={() => gmUpdateGlobalState(state)}
+                      onClick={() => {
+                        if (currentGlobalState === state) {
+                          gmUpdateGlobalState(""); // Deselect
+                        } else {
+                          gmUpdateGlobalState(state);
+                        }
+                      }}
                       className={`w-full p-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-between bg-purple-950/20 border-purple-900/50 text-purple-400 hover:border-purple-500 hover:bg-purple-950/30 ${
                         currentGlobalState === state
                           ? "bg-green-600 border-green-500 text-white shadow-[0_0_10px_rgba(34,197,94,0.3)]"
@@ -643,34 +667,115 @@ const UIGameMaster: React.FC = () => {
         {activeTab === "actions" && (
           <div className="animate-in slide-in-from-right-4 duration-300">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              <button className="aspect-square bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-4 group hover:bg-neutral-800 hover:border-indigo-500 transition-all">
+              {/* Global Message Button */}
+              <button
+                onClick={() => setShowGlobalMessageModal(true)}
+                className="aspect-square bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-4 group hover:bg-neutral-800 hover:border-indigo-500 transition-all"
+              >
                 <div className="p-4 bg-indigo-500/10 rounded-full group-hover:bg-indigo-500 text-indigo-500 group-hover:text-white transition-colors">
                   <MessageSquare size={32} />
                 </div>
                 <span className="font-bold text-neutral-300 group-hover:text-white">
-                  Mensaje Secreto
+                  Mensaje Global
                 </span>
               </button>
 
-              <button className="aspect-square bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-4 group hover:bg-neutral-800 hover:border-pink-500 transition-all">
-                <div className="p-4 bg-pink-500/10 rounded-full group-hover:bg-pink-500 text-pink-500 group-hover:text-white transition-colors">
-                  <Volume2 size={32} />
-                </div>
-                <span className="font-bold text-neutral-300 group-hover:text-white">
-                  Efecto Sonido
-                </span>
-              </button>
+              {/* Sound Effect Button with Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowGlobalSoundDropdown(!showGlobalSoundDropdown);
+                    setShowGlobalVibrationDropdown(false);
+                  }}
+                  className="aspect-square w-full bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-4 group hover:bg-neutral-800 hover:border-pink-500 transition-all"
+                >
+                  <div className="p-4 bg-pink-500/10 rounded-full group-hover:bg-pink-500 text-pink-500 group-hover:text-white transition-colors">
+                    <Volume2 size={32} />
+                  </div>
+                  <span className="font-bold text-neutral-300 group-hover:text-white">
+                    Efecto Sonido
+                  </span>
+                </button>
+                {showGlobalSoundDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-neutral-800 border border-neutral-700 rounded-lg shadow-xl z-20 max-h-48 overflow-y-auto">
+                    {[
+                      { id: "gong", emoji: "🔔", name: "GONG" },
+                      { id: "aullido", emoji: "🐺", name: "Aullido" },
+                      { id: "gallo", emoji: "🐓", name: "Gallo" },
+                      { id: "risabruja", emoji: "🧙‍♀️", name: "Risa Bruja" },
+                      { id: "reallynigga", emoji: "😤", name: "Really Nigga" },
+                    ].map((sound) => (
+                      <button
+                        key={sound.id}
+                        onClick={() => {
+                          gmSendSound(null, sound.id);
+                          setShowGlobalSoundDropdown(false);
+                        }}
+                        className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-pink-900/30 hover:text-pink-400 transition-colors"
+                      >
+                        {sound.emoji} {sound.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-              <button className="aspect-square bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-4 group hover:bg-neutral-800 hover:border-orange-500 transition-all">
-                <div className="p-4 bg-orange-500/10 rounded-full group-hover:bg-orange-500 text-orange-500 group-hover:text-white transition-colors">
-                  <Zap size={32} />
-                </div>
-                <span className="font-bold text-neutral-300 group-hover:text-white">
-                  Vibración
-                </span>
-              </button>
+              {/* Vibration Button with Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowGlobalVibrationDropdown(
+                      !showGlobalVibrationDropdown
+                    );
+                    setShowGlobalSoundDropdown(false);
+                  }}
+                  className="aspect-square w-full bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-4 group hover:bg-neutral-800 hover:border-orange-500 transition-all"
+                >
+                  <div className="p-4 bg-orange-500/10 rounded-full group-hover:bg-orange-500 text-orange-500 group-hover:text-white transition-colors">
+                    <Zap size={32} />
+                  </div>
+                  <span className="font-bold text-neutral-300 group-hover:text-white">
+                    Vibración
+                  </span>
+                </button>
+                {showGlobalVibrationDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-neutral-800 border border-neutral-700 rounded-lg shadow-xl z-20">
+                    <button
+                      onClick={() => {
+                        gmSendVibration(null, 10);
+                        setShowGlobalVibrationDropdown(false);
+                      }}
+                      className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-orange-900/30 hover:text-orange-400 transition-colors"
+                    >
+                      Débil (10ms) - Todos
+                    </button>
+                    <button
+                      onClick={() => {
+                        gmSendVibration(null, 100);
+                        setShowGlobalVibrationDropdown(false);
+                      }}
+                      className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-orange-900/30 hover:text-orange-400 transition-colors"
+                    >
+                      Media (100ms) - Todos
+                    </button>
+                    <button
+                      onClick={() => {
+                        gmSendVibration(null, 200);
+                        setShowGlobalVibrationDropdown(false);
+                      }}
+                      className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-orange-900/30 hover:text-orange-400 transition-colors"
+                    >
+                      Fuerte (200ms) - Todos
+                    </button>
+                  </div>
+                )}
+              </div>
 
-              <button className="aspect-square bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-4 group hover:bg-neutral-800 hover:border-blue-500 transition-all">
+              {/* Divine Voice Button */}
+              <button
+                onClick={() => setShowGlobalDivineVoiceModal(true)}
+                className="aspect-square bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-4 group hover:bg-neutral-800 hover:border-blue-500 transition-all"
+              >
                 <div className="p-4 bg-blue-500/10 rounded-full group-hover:bg-blue-500 text-blue-500 group-hover:text-white transition-colors">
                   <Mic size={32} />
                 </div>
@@ -837,46 +942,248 @@ const UIGameMaster: React.FC = () => {
           title={`Editar: ${editingPlayerData.nickname}`}
           onClose={() => setEditingPlayer(null)}
         >
-          <div className="space-y-4">
-            {/* States */}
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className="block text-xs text-neutral-500 uppercase mb-1">
-                  Estado Privado (Solo GM)
-                </label>
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+            {/* Role Editing */}
+            <div>
+              <label className="block text-xs text-neutral-500 uppercase mb-2 flex items-center gap-1">
+                <Fingerprint size={12} /> Rol del Jugador
+              </label>
+              <div className="flex gap-2">
                 <input
                   type="text"
-                  value={playerStateInput}
-                  onChange={(e) => setPlayerStateInput(e.target.value)}
-                  placeholder="Ej: Tiene el código..."
-                  className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm"
+                  defaultValue={editingPlayerData.role || "Player"}
+                  onBlur={(e) => {
+                    const newRole = e.target.value.trim() || "Player";
+                    if (newRole !== (editingPlayerData.role || "Player")) {
+                      gmUpdatePlayerRole(editingPlayer, newRole);
+                    }
+                  }}
+                  className="flex-1 bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm"
+                  placeholder="Ej: Mafioso, Detective..."
                 />
               </div>
-              <div>
-                <label className="block text-xs text-neutral-500 uppercase mb-1">
-                  Estado Público (Visible)
-                </label>
+            </div>
+
+            {/* Current States Display */}
+            <div>
+              <label className="block text-xs text-neutral-500 uppercase mb-2 flex items-center gap-1">
+                <EyeOff size={12} /> Estados Privados (click para quitar)
+              </label>
+              <div className="flex flex-wrap gap-1 min-h-[32px] p-2 bg-neutral-900 rounded-lg border border-neutral-700">
+                {(editingPlayerData.playerStates || []).length === 0 && (
+                  <span className="text-neutral-600 text-xs">Sin estados</span>
+                )}
+                {(editingPlayerData.playerStates || []).map((state) => (
+                  <button
+                    key={state}
+                    onClick={() => gmTogglePlayerState(editingPlayer, state)}
+                    className="px-2 py-1 bg-purple-900/30 text-purple-400 rounded text-xs hover:bg-red-900/30 hover:text-red-400 transition-colors"
+                  >
+                    {state} ×
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-neutral-500 uppercase mb-2 flex items-center gap-1">
+                <Eye size={12} /> Estados Públicos (click para quitar)
+              </label>
+              <div className="flex flex-wrap gap-1 min-h-[32px] p-2 bg-neutral-900 rounded-lg border border-neutral-700">
+                {(editingPlayerData.publicStates || []).length === 0 && (
+                  <span className="text-neutral-600 text-xs">Sin estados</span>
+                )}
+                {(editingPlayerData.publicStates || []).map((state) => (
+                  <button
+                    key={state}
+                    onClick={() => gmTogglePublicState(editingPlayer, state)}
+                    className="px-2 py-1 bg-blue-900/30 text-blue-400 rounded text-xs hover:bg-red-900/30 hover:text-red-400 transition-colors"
+                  >
+                    {state} ×
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Dropdowns Grid */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Add Player State Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowPlayerStateDropdown(!showPlayerStateDropdown);
+                    setShowPublicStateDropdown(false);
+                    setShowSoundDropdown(false);
+                    setShowVibrationDropdown(false);
+                  }}
+                  className="w-full p-2 bg-purple-900/20 text-purple-400 border border-purple-900/50 rounded-lg text-sm hover:bg-purple-900/40 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Plus size={14} /> Añadir estado
+                </button>
+                {showPlayerStateDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-neutral-800 border border-neutral-700 rounded-lg shadow-xl z-20 max-h-40 overflow-y-auto">
+                    {playerStates.map((state) => (
+                      <button
+                        key={state}
+                        onClick={() => {
+                          gmTogglePlayerState(editingPlayer, state);
+                          setShowPlayerStateDropdown(false);
+                        }}
+                        className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-purple-900/30 hover:text-purple-400 transition-colors"
+                      >
+                        {state}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Add Public State Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowPublicStateDropdown(!showPublicStateDropdown);
+                    setShowPlayerStateDropdown(false);
+                    setShowSoundDropdown(false);
+                    setShowVibrationDropdown(false);
+                  }}
+                  className="w-full p-2 bg-blue-900/20 text-blue-400 border border-blue-900/50 rounded-lg text-sm hover:bg-blue-900/40 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Plus size={14} /> Añadir público
+                </button>
+                {showPublicStateDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-neutral-800 border border-neutral-700 rounded-lg shadow-xl z-20 max-h-40 overflow-y-auto">
+                    {publicStates.map((state) => (
+                      <button
+                        key={state}
+                        onClick={() => {
+                          gmTogglePublicState(editingPlayer, state);
+                          setShowPublicStateDropdown(false);
+                        }}
+                        className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-blue-900/30 hover:text-blue-400 transition-colors"
+                      >
+                        {state}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Sound Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowSoundDropdown(!showSoundDropdown);
+                    setShowPlayerStateDropdown(false);
+                    setShowPublicStateDropdown(false);
+                    setShowVibrationDropdown(false);
+                  }}
+                  className="w-full p-2 bg-pink-900/20 text-pink-400 border border-pink-900/50 rounded-lg text-sm hover:bg-pink-900/40 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Volume2 size={14} /> Sonidos
+                </button>
+                {showSoundDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-neutral-800 border border-neutral-700 rounded-lg shadow-xl z-20 max-h-48 overflow-y-auto">
+                    {[
+                      { id: "gong", emoji: "🔔", name: "GONG" },
+                      { id: "aullido", emoji: "🐺", name: "Aullido" },
+                      { id: "gallo", emoji: "🐓", name: "Gallo" },
+                      { id: "risabruja", emoji: "🧙‍♀️", name: "Risa Bruja" },
+                      { id: "reallynigga", emoji: "😤", name: "Really Nigga" },
+                    ].map((sound) => (
+                      <button
+                        key={sound.id}
+                        onClick={() => {
+                          gmSendSound(editingPlayer, sound.id);
+                          setShowSoundDropdown(false);
+                        }}
+                        className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-pink-900/30 hover:text-pink-400 transition-colors"
+                      >
+                        {sound.emoji} {sound.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Vibration Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setShowVibrationDropdown(!showVibrationDropdown);
+                    setShowPlayerStateDropdown(false);
+                    setShowPublicStateDropdown(false);
+                    setShowSoundDropdown(false);
+                  }}
+                  className="w-full p-2 bg-orange-900/20 text-orange-400 border border-orange-900/50 rounded-lg text-sm hover:bg-orange-900/40 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Zap size={14} /> Vibración
+                </button>
+                {showVibrationDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-neutral-800 border border-neutral-700 rounded-lg shadow-xl z-20">
+                    <button
+                      onClick={() => {
+                        gmSendVibration(editingPlayer, 10);
+                        setShowVibrationDropdown(false);
+                      }}
+                      className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-orange-900/30 hover:text-orange-400 transition-colors"
+                    >
+                      Débil (10ms)
+                    </button>
+                    <button
+                      onClick={() => {
+                        gmSendVibration(editingPlayer, 100);
+                        setShowVibrationDropdown(false);
+                      }}
+                      className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-orange-900/30 hover:text-orange-400 transition-colors"
+                    >
+                      Media (100ms)
+                    </button>
+                    <button
+                      onClick={() => {
+                        gmSendVibration(editingPlayer, 200);
+                        setShowVibrationDropdown(false);
+                      }}
+                      className="w-full p-2 text-left text-sm text-neutral-300 hover:bg-orange-900/30 hover:text-orange-400 transition-colors"
+                    >
+                      Fuerte (200ms)
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Divine Voice */}
+            <div className="border-t border-neutral-800 pt-4">
+              <label className="block text-xs text-neutral-500 uppercase mb-1 flex items-center gap-1">
+                <Mic size={12} /> Voz Divina (Solo este player)
+              </label>
+              <div className="flex gap-2">
                 <input
                   type="text"
-                  value={publicStateInput}
-                  onChange={(e) => setPublicStateInput(e.target.value)}
-                  placeholder="Ej: Herido, Confuso..."
-                  className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm"
+                  value={divineVoiceText}
+                  onChange={(e) => setDivineVoiceText(e.target.value)}
+                  placeholder="Mensaje divino..."
+                  className="flex-1 bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white text-sm"
                 />
+                <button
+                  onClick={() => {
+                    if (divineVoiceText.trim()) {
+                      gmSendDivineVoice(editingPlayer, divineVoiceText);
+                      setDivineVoiceText("");
+                    }
+                  }}
+                  className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg transition-colors"
+                >
+                  <Send size={16} />
+                </button>
               </div>
-              <button
-                onClick={handleSavePlayerState}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg font-bold transition-colors"
-              >
-                Guardar Estados
-              </button>
             </div>
 
             {/* Whisper */}
             <div className="border-t border-neutral-800 pt-4">
-              <label className="block text-xs text-neutral-500 uppercase mb-1">
-                <MessageCircle size={12} className="inline mr-1" /> Whisper
-                (Mensaje Privado)
+              <label className="block text-xs text-neutral-500 uppercase mb-1 flex items-center gap-1">
+                <MessageCircle size={12} /> Whisper (Mensaje Privado Chat)
               </label>
               <div className="flex gap-2">
                 <input
@@ -1156,12 +1463,12 @@ const UIGameMaster: React.FC = () => {
                     key={player.id}
                     onClick={async () => {
                       if (assigningState.type === "player") {
-                        await gmAssignPlayerState(
+                        await gmTogglePlayerState(
                           player.id,
                           assigningState.value
                         );
                       } else {
-                        await gmAssignPublicState(
+                        await gmTogglePublicState(
                           player.id,
                           assigningState.value
                         );
@@ -1176,15 +1483,15 @@ const UIGameMaster: React.FC = () => {
                         {player.nickname}
                       </span>
                       {assigningState.type === "player" &&
-                        player.playerState && (
+                        (player.playerStates || []).length > 0 && (
                           <span className="block text-xs text-purple-400">
-                            {player.playerState}
+                            {(player.playerStates || []).join(", ")}
                           </span>
                         )}
                       {assigningState.type === "public" &&
-                        player.publicState && (
+                        (player.publicStates || []).length > 0 && (
                           <span className="block text-xs text-blue-400">
-                            {player.publicState}
+                            {(player.publicStates || []).join(", ")}
                           </span>
                         )}
                     </div>
@@ -1196,6 +1503,102 @@ const UIGameMaster: React.FC = () => {
                 No hay jugadores conectados
               </p>
             )}
+          </div>
+        </ModalWrapper>
+      )}
+
+      {/* GLOBAL MESSAGE MODAL */}
+      {showGlobalMessageModal && (
+        <ModalWrapper
+          title="Mensaje Global"
+          onClose={() => {
+            setShowGlobalMessageModal(false);
+            setGlobalMessageText("");
+          }}
+        >
+          <div className="space-y-4">
+            <p className="text-neutral-400 text-sm">
+              Envía un mensaje que verán todos los jugadores:
+            </p>
+            <input
+              type="text"
+              value={globalMessageText}
+              onChange={(e) => setGlobalMessageText(e.target.value)}
+              placeholder="Mensaje para todos..."
+              className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  if (globalMessageText.trim()) {
+                    await gmSendGlobalMessage(globalMessageText);
+                    setGlobalMessageText("");
+                    setShowGlobalMessageModal(false);
+                  }
+                }}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg font-bold"
+              >
+                Enviar a Todos
+              </button>
+              <button
+                onClick={() => {
+                  setShowGlobalMessageModal(false);
+                  setGlobalMessageText("");
+                }}
+                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white py-2 rounded-lg font-bold"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </ModalWrapper>
+      )}
+
+      {/* GLOBAL DIVINE VOICE MODAL */}
+      {showGlobalDivineVoiceModal && (
+        <ModalWrapper
+          title="Voz Divina Global"
+          onClose={() => {
+            setShowGlobalDivineVoiceModal(false);
+            setGlobalDivineVoiceText("");
+          }}
+        >
+          <div className="space-y-4">
+            <p className="text-neutral-400 text-sm">
+              Envía un mensaje divino a todos los jugadores:
+            </p>
+            <input
+              type="text"
+              value={globalDivineVoiceText}
+              onChange={(e) => setGlobalDivineVoiceText(e.target.value)}
+              placeholder="Mensaje divino para todos..."
+              className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  if (globalDivineVoiceText.trim()) {
+                    await gmSendDivineVoice(null, globalDivineVoiceText);
+                    setGlobalDivineVoiceText("");
+                    setShowGlobalDivineVoiceModal(false);
+                  }
+                }}
+                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg font-bold"
+              >
+                Enviar Voz Divina
+              </button>
+              <button
+                onClick={() => {
+                  setShowGlobalDivineVoiceModal(false);
+                  setGlobalDivineVoiceText("");
+                }}
+                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white py-2 rounded-lg font-bold"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </ModalWrapper>
       )}
