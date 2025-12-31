@@ -422,15 +422,15 @@ export const useStore = create<AppStore>((set, get) => ({
   },
 
   gmSetStaticTime: (timeString: string) => {
-    // Convert HH:MM to seconds
-    const [hours, minutes] = timeString.split(":").map(Number);
-    const totalSeconds = (hours * 60 + minutes) * 60;
+    // Convert MM:SS to seconds
+    const [minutes, seconds] = timeString.split(":").map(Number);
+    const totalSeconds = minutes * 60 + seconds;
 
+    const { room } = get();
     const newConfig = {
-      mode: "static" as const,
+      ...room.clockConfig,
       baseTime: totalSeconds,
-      startTime: null,
-      pausedAt: null,
+      // Mantener modo actual, NO forzar a 'static'
     };
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
   },

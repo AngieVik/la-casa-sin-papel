@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useStore } from "../store";
 import {
   Users,
@@ -29,7 +29,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import ModalWrapper from "./ModalWrapper";
-import { useGameClock, formatTimeToHHMM } from "../hooks/useGameClock";
+import { useGameClock, formatTimeToMMSS } from "../hooks/useGameClock";
 
 type TabID = "control" | "narrative" | "actions";
 
@@ -70,12 +70,29 @@ const UIGameMaster: React.FC = () => {
   // Local state
   const [localTicker, setLocalTicker] = useState(tickerText);
   const [globalState, setGlobalState] = useState("Día 1: Planificación");
-  const [countdownMinutes, setCountdownMinutes] = useState(5);
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   const [playerStateInput, setPlayerStateInput] = useState("");
   const [publicStateInput, setPublicStateInput] = useState("");
   const [whisperText, setWhisperText] = useState("");
   const [showShutdownConfirm, setShowShutdownConfirm] = useState(false);
+
+  // Clock buffer state (para poder editar sin que se borre)
+  const [localTime, setLocalTime] = useState(
+    formatTimeToMMSS(clockConfig.baseTime)
+  );
+  const [isEditingClock, setIsEditingClock] = useState(false);
+
+  // Sync local time with timeString when not editing
+  useEffect(() => {
+    if (!isEditingClock) {
+      setLocalTime(formatTimeToMMSS(clockConfig.baseTime));
+    }
+  }, [clockConfig.baseTime, isEditingClock]);
+
+  const handleClockBlur = () => {
+    setIsEditingClock(false);
+    gmSetStaticTime(localTime);
+  };
 
   const handleEndSession = async () => {
     if (
@@ -335,124 +352,105 @@ const UIGameMaster: React.FC = () => {
               </div>
             </div>
 
-            {/* Game Clock */}
+            {/* Reloj del Juego */}
             <div className="space-y-4">
               <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
                 <Clock size={16} /> Reloj del Juego
               </label>
 
-              {/* Clock Display */}
-              <div className="flex items-center justify-center gap-4 bg-neutral-950 p-6 rounded-xl border border-neutral-800">
-                <span className="text-5xl font-mono font-bold text-green-500">
-                  {timeString}
-                </span>
+              {/* INPUT EDITABLE - Para configurar la hora base */}
+              <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800">
+                <label className="text-xs text-neutral-500 mb-2 block">
+                  Configurar Tiempo (MM:SS):
+                </label>
+                <input
+                  type="text"
+                  pattern="[0-9]{2}:[0-9]{2}"
+                  placeholder="00:00"
+                  value={localTime}
+                  onChange={(e) => setLocalTime(e.target.value)}
+                  onFocus={() => setIsEditingClock(true)}
+                  onBlur={handleClockBlur}
+                  className="text-3xl font-mono font-black text-green-500 bg-transparent text-center w-full focus:outline-none placeholder:text-green-900"
+                />
               </div>
 
-              {/* Clock Mode Selector */}
-              <div className="flex gap-2">
+              {/* BOTONES DE CONTROL - Grid 2 columnas */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* TARJETA CUENTA ATRÁS */}
                 <button
-                  onClick={() => gmResetClock("static", 0)}
-                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
-                    clockConfig.mode === "static"
-                      ? "bg-blue-600 border-blue-500 text-white"
-                      : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600"
-                  }`}
-                >
-                  <TimerOff size={16} /> Estático
-                </button>
-                <button
-                  onClick={() => gmSetBaseTime(countdownMinutes * 60)}
-                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
-                    clockConfig.mode === "countdown"
-                      ? "bg-orange-600 border-orange-500 text-white"
-                      : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600"
-                  }`}
-                >
-                  <Hourglass size={16} /> Cuenta Atrás
-                </button>
-                <button
-                  onClick={() => gmSetBaseTime(0)}
-                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
-                    clockConfig.mode === "stopwatch"
-                      ? "bg-green-600 border-green-500 text-white"
-                      : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-600"
-                  }`}
-                >
-                  <Timer size={16} /> Cronómetro
-                </button>
-              </div>
-
-              {/* Countdown Settings */}
-              {clockConfig.mode === "countdown" && (
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-neutral-500">Minutos:</label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={120}
-                    value={countdownMinutes}
-                    onChange={(e) =>
-                      setCountdownMinutes(Number(e.target.value))
+                  onClick={() => {
+                    if (
+                      clockConfig.mode === "countdown" &&
+                      clockConfig.startTime !== null &&
+                      clockConfig.pausedAt === null
+                    ) {
+                      gmPauseClock();
+                    } else {
+                      gmStartClock("countdown");
                     }
-                    className="w-20 bg-neutral-950 border border-neutral-700 rounded px-2 py-1 text-white text-center"
-                  />
-                  <button
-                    onClick={() => gmSetBaseTime(countdownMinutes * 60)}
-                    className="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1 rounded text-sm flex items-center gap-1"
-                  >
-                    <RotateCcw size={14} /> Set
-                  </button>
-                </div>
-              )}
-
-              {/* Static Time Input */}
-              {clockConfig.mode === "static" && (
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-neutral-500">Hora:</label>
-                  <input
-                    type="time"
-                    value={formatTimeToHHMM(clockConfig.baseTime)}
-                    onChange={(e) => gmSetStaticTime(e.target.value)}
-                    className="bg-neutral-950 border border-neutral-700 rounded px-3 py-2 text-white font-mono"
-                  />
-                </div>
-              )}
-
-              {/* Play/Pause Controls */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() =>
-                    gmStartClock(
-                      clockConfig.mode === "static"
-                        ? "stopwatch"
-                        : clockConfig.mode
-                    )
-                  }
-                  disabled={
-                    clockConfig.mode === "static" ||
-                    (clockConfig.startTime !== null &&
-                      clockConfig.pausedAt === null)
-                  }
-                  className="flex-1 bg-green-600 hover:bg-green-500 disabled:bg-neutral-800 disabled:text-neutral-600 disabled:cursor-not-allowed text-white px-4 py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
+                  }}
+                  className={`flex flex-col items-center justify-center gap-3 p-6 rounded-xl border transition-all hover:scale-105 ${
+                    clockConfig.mode === "countdown" &&
+                    clockConfig.startTime !== null &&
+                    clockConfig.pausedAt === null
+                      ? "bg-orange-900/30 border-orange-500 text-orange-400"
+                      : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-orange-600"
+                  }`}
                 >
-                  <Play size={18} fill="currentColor" /> Play
+                  {clockConfig.mode === "countdown" &&
+                  clockConfig.startTime !== null &&
+                  clockConfig.pausedAt === null ? (
+                    <Pause size={32} className="text-orange-500" />
+                  ) : (
+                    <Play
+                      size={32}
+                      fill="currentColor"
+                      className="text-orange-500"
+                    />
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Hourglass size={20} />
+                    <span className="font-bold text-sm">Cuenta Atrás</span>
+                  </div>
                 </button>
+
+                {/* TARJETA CRONÓMETRO */}
                 <button
-                  onClick={gmPauseClock}
-                  disabled={
-                    clockConfig.mode === "static" ||
-                    clockConfig.startTime === null ||
-                    clockConfig.pausedAt !== null
-                  }
-                  className="flex-1 bg-yellow-600 hover:bg-yellow-500 disabled:bg-neutral-800 disabled:text-neutral-600 disabled:cursor-not-allowed text-white px-4 py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
+                  onClick={() => {
+                    if (
+                      clockConfig.mode === "stopwatch" &&
+                      clockConfig.startTime !== null &&
+                      clockConfig.pausedAt === null
+                    ) {
+                      gmPauseClock();
+                    } else {
+                      gmStartClock("stopwatch");
+                    }
+                  }}
+                  className={`flex flex-col items-center justify-center gap-3 p-6 rounded-xl border transition-all hover:scale-105 ${
+                    clockConfig.mode === "stopwatch" &&
+                    clockConfig.startTime !== null &&
+                    clockConfig.pausedAt === null
+                      ? "bg-green-900/30 border-green-500 text-green-400"
+                      : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-green-600"
+                  }`}
                 >
-                  <Pause size={18} /> Pause
-                </button>
-                <button
-                  onClick={gmResetClock}
-                  className="bg-red-600 hover:bg-red-500 text-white px-4 py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
-                >
-                  <RotateCcw size={18} /> Reset
+                  {clockConfig.mode === "stopwatch" &&
+                  clockConfig.startTime !== null &&
+                  clockConfig.pausedAt === null ? (
+                    <Pause size={32} className="text-green-500" />
+                  ) : (
+                    <Play
+                      size={32}
+                      fill="currentColor"
+                      className="text-green-500"
+                    />
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Timer size={20} />
+                    <span className="font-bold text-sm">Cronómetro</span>
+                  </div>
                 </button>
               </div>
             </div>

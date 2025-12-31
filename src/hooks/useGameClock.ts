@@ -72,7 +72,7 @@ function calculateTime(config: ClockConfig): string {
 }
 
 /**
- * Formatea segundos a formato "MM:SS"
+ * Formatea segundos a formato "MM:SS" para mostrar tiempo del juego
  */
 function formatTime(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
@@ -84,12 +84,12 @@ function formatTime(totalSeconds: number): string {
 }
 
 /**
- * Formatea segundos a formato "HH:MM" para input type="time"
+ * Formatea segundos a formato "MM:SS" para input de texto
  */
-export function formatTimeToHHMM(totalSeconds: number): string {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+export function formatTimeToMMSS(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
     2,
     "0"
   )}`;
