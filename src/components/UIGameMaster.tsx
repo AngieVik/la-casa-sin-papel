@@ -17,7 +17,6 @@ import {
   Play,
   Square,
   Timer,
-  TimerOff,
   Hourglass,
   UserX,
   Ban,
@@ -26,7 +25,6 @@ import {
   Gauge,
   PowerOff,
   Pause,
-  RotateCcw,
 } from "lucide-react";
 import ModalWrapper from "./ModalWrapper";
 import { useGameClock, formatTimeToMMSS } from "../hooks/useGameClock";
@@ -51,10 +49,8 @@ const UIGameMaster: React.FC = () => {
   const gmUpdateTicker = useStore((state) => state.gmUpdateTicker);
   const gmStartGame = useStore((state) => state.gmStartGame);
   const gmEndGame = useStore((state) => state.gmEndGame);
-  const gmSetBaseTime = useStore((state) => state.gmSetBaseTime);
   const gmStartClock = useStore((state) => state.gmStartClock);
   const gmPauseClock = useStore((state) => state.gmPauseClock);
-  const gmResetClock = useStore((state) => state.gmResetClock);
   const gmSetStaticTime = useStore((state) => state.gmSetStaticTime);
   const gmSetTickerSpeed = useStore((state) => state.gmSetTickerSpeed);
   const gmKickPlayer = useStore((state) => state.gmKickPlayer);
@@ -76,7 +72,7 @@ const UIGameMaster: React.FC = () => {
   const [whisperText, setWhisperText] = useState("");
   const [showShutdownConfirm, setShowShutdownConfirm] = useState(false);
 
-  // Clock buffer state (para poder editar sin que se borre)
+  // Clock buffer state
   const [localTime, setLocalTime] = useState(
     formatTimeToMMSS(clockConfig.baseTime)
   );
@@ -89,8 +85,30 @@ const UIGameMaster: React.FC = () => {
     }
   }, [clockConfig.baseTime, isEditingClock]);
 
+  // Manejador del input de tiempo BLINDADO
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // 1. Eliminar cualquier cosa que no sea número
+    let raw = e.target.value.replace(/\D/g, "");
+
+    // 2. Limitar a 4 dígitos (MMSS)
+    if (raw.length > 4) raw = raw.slice(0, 4);
+
+    // 3. Formatear visualmente
+    // Si escribe "1" -> "1"
+    // Si escribe "12" -> "12"
+    // Si escribe "123" -> "12:3" (Inserta los dos puntos solo)
+    // Si escribe "1234" -> "12:34"
+    let formatted = raw;
+    if (raw.length >= 3) {
+      formatted = raw.slice(0, 2) + ":" + raw.slice(2);
+    }
+
+    setLocalTime(formatted);
+  };
+
   const handleClockBlur = () => {
     setIsEditingClock(false);
+    // Al salir, enviamos lo que haya. La función del store lo saneará si faltan ceros.
     gmSetStaticTime(localTime);
   };
 
@@ -358,21 +376,23 @@ const UIGameMaster: React.FC = () => {
                 <Clock size={16} /> Reloj del Juego
               </label>
 
-              {/* INPUT EDITABLE - Para configurar la hora base */}
+              {/* INPUT EDITABLE BLINDADO */}
               <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800">
                 <label className="text-xs text-neutral-500 mb-2 block">
                   Configurar Tiempo (MM:SS):
                 </label>
                 <input
                   type="text"
-                  pattern="[0-9]{2}:[0-9]{2}"
                   placeholder="00:00"
                   value={localTime}
-                  onChange={(e) => setLocalTime(e.target.value)}
+                  onChange={handleTimeChange}
                   onFocus={() => setIsEditingClock(true)}
                   onBlur={handleClockBlur}
                   className="text-3xl font-mono font-black text-green-500 bg-transparent text-center w-full focus:outline-none placeholder:text-green-900"
                 />
+                <p className="text-[10px] text-neutral-600 text-center mt-2">
+                  Escribe los números, el formato es automático.
+                </p>
               </div>
 
               {/* BOTONES DE CONTROL - Grid 2 columnas */}
@@ -533,14 +553,14 @@ const UIGameMaster: React.FC = () => {
 
             <div className="mt-8 p-4 bg-red-950/20 border border-red-900/30 rounded-xl">
               <h4 className="text-red-500 font-bold mb-4 flex items-center gap-2">
-                <Settings size={16} /> Zona de Peligro
+                <Settings size={16} /> Zona pegrilosa
               </h4>
               <div className="flex gap-4 flex-wrap">
                 <button
                   onClick={() => setShowShutdownConfirm(true)}
                   className="px-4 py-2 bg-red-900/20 text-red-400 border border-red-900/50 rounded-lg hover:bg-red-900 hover:text-white text-sm transition-colors flex items-center gap-2"
                 >
-                  <PowerOff size={16} /> APAGAR (Reset Seguro)
+                  <PowerOff size={16} /> SHUTDOWN (Reset Total)
                 </button>
               </div>
             </div>
@@ -646,13 +666,14 @@ const UIGameMaster: React.FC = () => {
       {/* SHUTDOWN CONFIRMATION MODAL */}
       {showShutdownConfirm && (
         <ModalWrapper
-          title="⚠️ Confirmación de Apagado"
+          title="⚠️¿Confirmas SHUTDOWN?⚠️"
           onClose={() => setShowShutdownConfirm(false)}
         >
-          <div className="space-y-6">
+          <div className="space-y-2">
             <p className="text-neutral-300 text-center text-lg">
-              ¿REINICIAR SALA? Se borrarán chats, votos y estados. Las
-              conexiones se mantienen.
+              
+              Reiniciarás la base de datos, se borrarán chats, votos y estados.
+              Todo hará puff!
             </p>
             <div className="flex gap-3">
               <button
@@ -660,15 +681,15 @@ const UIGameMaster: React.FC = () => {
                   await gmResetRoom();
                   setShowShutdownConfirm(false);
                 }}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold transition-colors"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white px-1 py-1 rounded-lg font-bold transition-colors"
               >
-                Sí, reiniciar
+                Sí, ¡Por favor!
               </button>
               <button
                 onClick={() => setShowShutdownConfirm(false)}
-                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white px-6 py-3 rounded-lg font-bold transition-colors"
+                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white px-1 py-1 rounded-lg font-bold transition-colors"
               >
-                Cancelar
+                Mejor no...
               </button>
             </div>
           </div>

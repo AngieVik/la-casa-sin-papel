@@ -12,22 +12,32 @@ interface ClockConfig {
  * Funciona como un reloj de tablero deportivo.
  */
 export function useGameClock(config: ClockConfig): string {
-  const [currentTime, setCurrentTime] = useState(() => calculateTime(config));
+  // Asegurarse de que config nunca es undefined para evitar crash inicial
+  const safeConfig = config || {
+    mode: "static",
+    baseTime: 0,
+    startTime: null,
+    pausedAt: null,
+  };
+
+  const [currentTime, setCurrentTime] = useState(() =>
+    calculateTime(safeConfig)
+  );
 
   useEffect(() => {
     // Si el reloj está pausado o es estático, no necesitamos intervalo
-    if (config.mode === "static" || config.startTime === null) {
-      setCurrentTime(calculateTime(config));
+    if (safeConfig.mode === "static" || safeConfig.startTime === null) {
+      setCurrentTime(calculateTime(safeConfig));
       return;
     }
 
     // Actualizar cada segundo para countdown y stopwatch activos
     const interval = setInterval(() => {
-      setCurrentTime(calculateTime(config));
+      setCurrentTime(calculateTime(safeConfig));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [config]);
+  }, [safeConfig]);
 
   return currentTime;
 }
@@ -38,9 +48,12 @@ export function useGameClock(config: ClockConfig): string {
 function calculateTime(config: ClockConfig): string {
   const { mode, baseTime, startTime, pausedAt } = config;
 
+  // Protección contra NaN en baseTime
+  const safeBaseTime = isNaN(baseTime) ? 0 : baseTime;
+
   // Modo estático: simplemente muestra baseTime
   if (mode === "static") {
-    return formatTime(baseTime);
+    return formatTime(safeBaseTime);
   }
 
   // Calcular tiempo transcurrido
@@ -56,25 +69,30 @@ function calculateTime(config: ClockConfig): string {
     }
   }
 
+  // Protección contra NaN en elapsedSeconds
+  if (isNaN(elapsedSeconds)) elapsedSeconds = 0;
+
   if (mode === "countdown") {
     // Cuenta atrás: baseTime - tiempo transcurrido (mínimo 0)
-    const remaining = Math.max(0, baseTime - elapsedSeconds);
+    const remaining = Math.max(0, safeBaseTime - elapsedSeconds);
     return formatTime(Math.floor(remaining));
   }
 
   if (mode === "stopwatch") {
     // Cronómetro: baseTime + tiempo transcurrido
-    const accumulated = baseTime + elapsedSeconds;
+    const accumulated = safeBaseTime + elapsedSeconds;
     return formatTime(Math.floor(accumulated));
   }
 
-  return formatTime(baseTime);
+  return formatTime(safeBaseTime);
 }
 
 /**
  * Formatea segundos a formato "MM:SS" para mostrar tiempo del juego
  */
 function formatTime(totalSeconds: number): string {
+  if (isNaN(totalSeconds)) return "00:00"; // Fallback final
+
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = Math.floor(totalSeconds % 60);
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
@@ -87,6 +105,8 @@ function formatTime(totalSeconds: number): string {
  * Formatea segundos a formato "MM:SS" para input de texto
  */
 export function formatTimeToMMSS(totalSeconds: number): string {
+  if (isNaN(totalSeconds)) return "00:00"; // Fallback final
+
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = Math.floor(totalSeconds % 60);
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(

@@ -14,6 +14,14 @@ import { signInAnonymously, onAuthStateChanged } from "firebase/auth";
 
 const ROOM_REF = "rooms/defaultRoom";
 
+// --- CONSTANTE DE SEGURIDAD PARA EL RELOJ ---
+const DEFAULT_CLOCK_CONFIG = {
+  mode: "static" as const,
+  baseTime: 0,
+  startTime: null,
+  pausedAt: null,
+};
+
 export const useStore = create<AppStore>((set, get) => ({
   user: {
     nickname: "",
@@ -28,12 +36,7 @@ export const useStore = create<AppStore>((set, get) => ({
     votes: {},
     globalState: "Día 1: Planificación",
     tickerText: "Esperando conexión...",
-    clockConfig: {
-      mode: "static" as const,
-      baseTime: 0,
-      startTime: null,
-      pausedAt: null,
-    },
+    clockConfig: DEFAULT_CLOCK_CONFIG, // Usamos la constante aquí
     tickerSpeed: 20,
     channels: { global: [] },
   },
@@ -69,18 +72,14 @@ export const useStore = create<AppStore>((set, get) => ({
       onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser) {
           try {
-            // Usuario ya logueado, recuperar datos de Firebase Database
             const uid = firebaseUser.uid;
             const playerRef = ref(db, `${ROOM_REF}/players/${uid}`);
             const snapshot = await firebaseGet(playerRef);
 
             if (snapshot.exists()) {
               const playerData = snapshot.val();
-
-              // Actualizar estado a 'online'
               await update(playerRef, { status: "online" });
 
-              // Restaurar estado del store
               set({
                 user: {
                   nickname: playerData.nickname,
@@ -97,12 +96,10 @@ export const useStore = create<AppStore>((set, get) => ({
                 },
               });
 
-              // Si es GM, limpiar jugadores antiguos
               if (playerData.isGM) {
                 get().cleanupOldPlayers();
               }
             } else {
-              // El usuario existe en Auth pero no en Database, forzar re-login
               set((state) => ({
                 ui: { ...state.ui, currentView: "login", isLoading: false },
               }));
@@ -114,7 +111,6 @@ export const useStore = create<AppStore>((set, get) => ({
             }));
           }
         } else {
-          // No hay usuario logueado
           set((state) => ({
             ui: { ...state.ui, currentView: "login", isLoading: false },
           }));
@@ -124,7 +120,7 @@ export const useStore = create<AppStore>((set, get) => ({
     });
   },
 
-  // --- Cleanup: Remove old offline players ---
+  // --- Cleanup ---
   cleanupOldPlayers: async () => {
     try {
       const playersRef = ref(db, `${ROOM_REF}/players`);
@@ -136,11 +132,9 @@ export const useStore = create<AppStore>((set, get) => ({
 
         Object.entries(players).forEach(
           async ([playerId, playerData]: [string, any]) => {
-            // No borrar GMs y solo borrar si llevan offline más de 1 hora
             if (!playerData.isGM && playerData.status === "offline") {
               const lastSeen = playerData.lastSeen || 0;
               if (lastSeen < oneHourAgo) {
-                console.log(`Removing old player: ${playerData.nickname}`);
                 await remove(ref(db, `${ROOM_REF}/players/${playerId}`));
               }
             }
@@ -152,7 +146,7 @@ export const useStore = create<AppStore>((set, get) => ({
     }
   },
 
-  // --- Firebase: Login ---
+  // --- Login ---
   loginToFirebase: async (nickname, isGM) => {
     set((state) => ({ ui: { ...state.ui, isLoading: true, error: null } }));
 
@@ -184,7 +178,6 @@ export const useStore = create<AppStore>((set, get) => ({
         lastSeen: Date.now(),
       });
 
-      // Si es GM, limpiar jugadores antiguos
       if (isGM) {
         get().cleanupOldPlayers();
       }
@@ -198,7 +191,7 @@ export const useStore = create<AppStore>((set, get) => ({
     }
   },
 
-  // --- Firebase: Realtime Sync ---
+  // --- Sync ---
   subscribeToRoom: () => {
     const state = get();
     if (state.ui.isSync) return;
@@ -218,7 +211,6 @@ export const useStore = create<AppStore>((set, get) => ({
             )
           : [];
 
-        // Parse channels
         const channelsData: Record<string, ChatMessage[]> = {};
         if (data.channels) {
           Object.entries(data.channels).forEach(([channelName, messages]) => {
@@ -233,7 +225,6 @@ export const useStore = create<AppStore>((set, get) => ({
           });
         }
 
-        // Legacy chat support -> migrate to global channel
         const legacyMessages: ChatMessage[] = data.chat
           ? Object.entries(data.chat).map(([key, val]: [string, unknown]) => ({
               id: key,
@@ -258,17 +249,13 @@ export const useStore = create<AppStore>((set, get) => ({
             }
           }
 
+          // Protección robusta al recibir datos
           return {
             room: {
               ...state.room,
               status: newStatus,
               tickerText: data.ticker || "Sistema en línea.",
-              clockConfig: data.clockConfig || {
-                mode: "static" as const,
-                startTime: null,
-                pausedAt: null,
-                duration: 0,
-              },
+              clockConfig: data.clockConfig || DEFAULT_CLOCK_CONFIG, 
               tickerSpeed: data.tickerSpeed || 20,
               globalState: data.globalState || "Esperando",
               players: playersList,
@@ -287,7 +274,7 @@ export const useStore = create<AppStore>((set, get) => ({
     });
   },
 
-  // --- Firebase: Chat ---
+  // --- Chat ---
   sendChatMessage: async (text, channel = "global") => {
     const { user } = get();
     if (!user.id || !text.trim()) return;
@@ -305,7 +292,6 @@ export const useStore = create<AppStore>((set, get) => ({
   updatePlayerStatus: async (ready) => {
     const { user } = get();
     if (!user.id) return;
-
     const playerRef = ref(db, `${ROOM_REF}/players/${user.id}`);
     await update(playerRef, { ready });
   },
@@ -346,12 +332,12 @@ export const useStore = create<AppStore>((set, get) => ({
     update(ref(db, ROOM_REF), { globalState: state });
   },
 
-  // --- GM Clock Actions (Sports Scoreboard Logic) ---
+  // --- GM Clock Actions ---
   gmSetBaseTime: (seconds) => {
-    // ESTA ACCIÓN ES DESTRUCTIVA: Reinicia el reloj con una nueva base
+    const safeSeconds = isNaN(seconds) ? 0 : seconds;
     const newConfig = {
       mode: "static" as const,
-      baseTime: seconds,
+      baseTime: safeSeconds,
       startTime: null,
       pausedAt: null,
     };
@@ -360,46 +346,49 @@ export const useStore = create<AppStore>((set, get) => ({
 
   gmStartClock: (mode) => {
     const { room } = get();
-    const config = room.clockConfig;
+    const config = room.clockConfig || DEFAULT_CLOCK_CONFIG;
+
+    const isStartTimeValid =
+      config.startTime !== null && !isNaN(config.startTime);
+    const isPausedAtValid =
+      config.pausedAt !== null && !isNaN(config.pausedAt);
+
+    const currentBaseTime = isNaN(config.baseTime) ? 0 : config.baseTime;
 
     let newConfig;
 
-    if (config.startTime === null && config.pausedAt === null) {
-      // Caso 1: Primera vez que arranca desde parado
+    if (!isStartTimeValid && !isPausedAtValid) {
+      // Caso 1: Estaba parado. INICIAR.
       newConfig = {
         ...config,
         mode,
+        baseTime: currentBaseTime,
         startTime: Date.now(),
         pausedAt: null,
       };
-    } else if (config.pausedAt !== null) {
-      // Caso 2: Reanudar desde pausa (RESUME)
-      // Calculamos cuánto tiempo "corrió" antes de la pausa
-      const previousRunTime = (config.pausedAt - config.startTime!) / 1000;
+    } else if (isPausedAtValid) {
+      // Caso 2: Estaba pausado. REANUDAR.
+      const startRef = isStartTimeValid ? config.startTime! : config.pausedAt!;
+      const previousRunTime = (config.pausedAt! - startRef) / 1000;
 
-      // Actualizamos el baseTime para "quemar" ese tiempo ya transcurrido
-      // y reiniciamos el startTime a AHORA. Esto evita deriva temporal.
-      let newBaseTime = config.baseTime;
-      
-      // Si era cuenta atrás, el nuevo base es lo que quedaba
+      const safePreviousRunTime = isNaN(previousRunTime) ? 0 : previousRunTime;
+
+      let newBaseTime = currentBaseTime;
+
       if (config.mode === "countdown") {
-        newBaseTime = Math.max(0, config.baseTime - previousRunTime);
-      } 
-      // Si era cronómetro, el nuevo base es lo que ya llevábamos acumulado
-      else if (config.mode === "stopwatch") {
-        newBaseTime = config.baseTime + previousRunTime;
+        newBaseTime = Math.max(0, currentBaseTime - safePreviousRunTime);
+      } else if (config.mode === "stopwatch") {
+        newBaseTime = currentBaseTime + safePreviousRunTime;
       }
 
-      // IMPORTANTE: Al reanudar, cambiamos al modo solicitado (mode argument)
-      // Esto permite pausar una cuenta atrás y reanudarla como cronómetro si se quisiera
       newConfig = {
-        mode: mode, // Usar el modo nuevo solicitado
+        mode: mode,
         baseTime: newBaseTime,
-        startTime: Date.now(), // Nuevo punto de partida
+        startTime: Date.now(),
         pausedAt: null,
       };
     } else {
-      // Ya está corriendo, no hacer nada para evitar reseteos accidentales
+      // Caso 3: Ya está corriendo.
       return;
     }
 
@@ -408,10 +397,14 @@ export const useStore = create<AppStore>((set, get) => ({
 
   gmPauseClock: () => {
     const { room } = get();
-    const config = room.clockConfig;
+    const config = room.clockConfig || DEFAULT_CLOCK_CONFIG;
 
-    // Solo pausar si está corriendo (startTime existe y no está ya pausado)
-    if (config.startTime === null || config.pausedAt !== null) return;
+    const isStartTimeValid =
+      config.startTime !== null && !isNaN(config.startTime);
+    const isPausedAtValid =
+      config.pausedAt !== null && !isNaN(config.pausedAt);
+
+    if (!isStartTimeValid || isPausedAtValid) return;
 
     const newConfig = {
       ...config,
@@ -423,9 +416,10 @@ export const useStore = create<AppStore>((set, get) => ({
 
   gmResetClock: () => {
     const { room } = get();
-    // Resetea solo el estado de ejecución, manteniendo el baseTime actual (o el remanente)
+    const currentConfig = room.clockConfig || DEFAULT_CLOCK_CONFIG;
+
     const newConfig = {
-      ...room.clockConfig,
+      ...currentConfig,
       startTime: null,
       pausedAt: null,
     };
@@ -433,17 +427,18 @@ export const useStore = create<AppStore>((set, get) => ({
   },
 
   gmSetStaticTime: (timeString: string) => {
-    // Convert MM:SS to seconds
-    const [minutes, seconds] = timeString.split(":").map(Number);
+    if (!timeString) timeString = "00:00";
+
+    const parts = timeString.split(":").map((v) => parseInt(v, 10));
+    const minutes = isNaN(parts[0]) ? 0 : parts[0];
+    const seconds = isNaN(parts[1]) ? 0 : parts[1];
     const totalSeconds = minutes * 60 + seconds;
 
-    // FIX CRÍTICO: Al editar manualmente, forzamos un RESET COMPLETO del estado.
-    // Esto evita que se mezcle el tiempo nuevo con un 'startTime' antiguo.
     const newConfig = {
       mode: "static" as const,
       baseTime: totalSeconds,
-      startTime: null, // Reset: el reloj se detiene
-      pausedAt: null,  // Reset: quitamos pausas antiguas
+      startTime: null,
+      pausedAt: null,
     };
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
   },
@@ -507,19 +502,21 @@ export const useStore = create<AppStore>((set, get) => ({
     });
   },
 
+  // --- BOTÓN NUCLEAR DE LIMPIEZA ---
   gmResetRoom: async () => {
     const { room } = get();
+    
+    // Usamos la constante segura para forzar una limpieza real
+    const safeClockConfig = DEFAULT_CLOCK_CONFIG;
+
     const updates: Record<string, unknown> = {
       status: "waiting",
       channels: null,
       votes: null,
-      clockConfig: {
-        mode: "static",
-        baseTime: 0,
-        startTime: null,
-        pausedAt: null,
-      },
-      globalState: "Día 1: Planificación",
+      // Esto sobrescribe CUALQUIER error en la base de datos
+      clockConfig: safeClockConfig,
+      globalState: "Arrancando sesión...",
+      ticker: "Sistema reiniciado. Mantengan la calma.",
     };
 
     room.players.forEach((p) => {

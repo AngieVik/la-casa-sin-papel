@@ -1,6 +1,6 @@
 ## Run Locally
 
-**Prerequisites:**  Node.js, Zustand, Firebase, Vite, React, TailwindCSS, Lucide React 
+**Prerequisites:** Node.js, Zustand, Firebase, Vite, React, TailwindCSS, Lucide React
 
 1. Install dependencies:
    `npm install`
