@@ -70,49 +70,59 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans selection:bg-red-900 selection:text-white pb-20 md:pb-0">
-      {/* HEADER: 2 Filas */}
-      <header className="sticky top-0 z-40 bg-neutral-900/90 backdrop-blur-md border-b border-neutral-800 shadow-lg">
-        {/* Fila 1: Info Principal */}
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
+      {/* HEADER: Integrado */}
+        {/* Definición de Animación en línea */}
+        <header className="h-16 border-b border-neutral-800 bg-neutral-950 shadow-md sticky top-0 z-50">
+        <style>
+          {`
+            @keyframes marqueeHeader {  /* <--- CORREGIDO AQUÍ */
+              0% { transform: translateX(100vw); }
+              100% { transform: translateX(-100%); }
+            }
+            .animate-marquee-header {
+              animation: marqueeHeader linear infinite;
+              will-change: transform;
+            }
+          `}
+        </style>
+
+        <div className="flex items-center justify-between h-full w-full px-4 overflow-hidden">
+          {/* 1. IZQUIERDA: Reloj y Estado */}
+          <div className="flex-shrink-0 flex items-center gap-4 pr-4 border-r border-neutral-800/50 h-10 my-auto z-20 bg-neutral-950">
             <div
-              className={`w-3 h-3 rounded-full ${
-                isSync ? "bg-green-500 animate-pulse" : "bg-red-500"
+              className={`w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor] transition-colors duration-500 ${
+                isSync ? "bg-green-500 text-green-500" : "bg-red-500 text-red-500"
               }`}
             />
-            <div className="flex items-center gap-2 text-2xl font-mono font-bold tracking-widest text-red-600">
+            <div className="flex items-center gap-2 text-xl font-mono font-bold tracking-widest text-red-600">
               <Clock className="w-5 h-5" />
               <span>{timeString}</span>
             </div>
           </div>
-          <button
-            onClick={() => setIsUserMenuOpen(true)}
-            className="font-bold text-neutral-300 truncate max-w-[150px] hover:text-red-500 transition-colors cursor-pointer"
-          >
-            {nickname || "Anónimo"}
-          </button>
-        </div>
 
-        {/* Fila 2: Ticker (Marquesina) */}
-        <div className="bg-red-900/20 border-t border-red-900/30 overflow-hidden h-8 flex items-center">
-          <style>
-            {`
-              @keyframes marquee {
-                0% { transform: translateX(100%); }
-                100% { transform: translateX(-100%); }
-              }
-              .animate-marquee {
-                animation: marquee linear infinite;
-              }
-            `}
-          </style>
-          <div
-            className="animate-marquee whitespace-nowrap text-xs font-mono text-red-400 px-4 uppercase tracking-widest"
-            style={{
-              animationDuration: `${tickerSpeed}s`,
-            }}
-          >
-            {tickerText}
+          {/* 2. CENTRO: Ticker */}
+          <div className="flex-1 relative h-full flex items-center overflow-hidden mx-4 min-w-0">
+            {/* Degradados */}
+            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-neutral-950 to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-neutral-950 to-transparent z-10 pointer-events-none" />
+
+            {/* Texto animado */}
+            <div
+              className="animate-marquee-header whitespace-nowrap text-sm font-mono text-red-400/90 font-bold tracking-[0.2em]"
+              style={{ animationDuration: `${tickerSpeed}s` }}
+            >
+              {tickerText}
+            </div>
+          </div>
+
+          {/* 3. DERECHA: Usuario */}
+          <div className="flex-shrink-0 flex items-center pl-4 border-l border-neutral-800/50 h-10 my-auto z-20 bg-neutral-950">
+            <button
+              onClick={() => setIsUserMenuOpen(true)}
+              className="flex items-center gap-2 font-bold text-neutral-400 hover:text-white transition-colors text-sm max-w-[200px]"
+            >
+              <span className="truncate">{nickname || "DESCONOCIDO"}</span>
+            </button>
           </div>
         </div>
       </header>
