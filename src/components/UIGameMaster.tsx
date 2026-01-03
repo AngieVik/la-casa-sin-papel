@@ -38,6 +38,9 @@ import ConfirmModal from "./ConfirmModal";
 import { useGameClock, formatTimeToMMSS } from "../hooks/useGameClock";
 import { GAMES } from "../constants/games";
 import { SOUNDS } from "../constants/sounds";
+import GMControlTab from "./gm/GMControlTab";
+import GMNarrativeTab from "./gm/GMNarrativeTab";
+import GMActionsTab from "./gm/GMActionsTab";
 
 type TabID = "control" | "narrative" | "actions";
 
