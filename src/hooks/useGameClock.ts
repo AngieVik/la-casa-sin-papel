@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from "react";
 
 interface ClockConfig {
   mode: "static" | "countdown" | "stopwatch";
-  baseTime: number; // Tiempo acumulado en segundos
+  baseTime: number;
   isRunning: boolean;
-  startTime: number | null; // Timestamp de inicio (null si pausado)
+  startTime: number | null;
+  pausedAt?: number | null; // <--- Faltaba definir esto aquí
 }
 
 /**
@@ -18,6 +19,7 @@ export function useGameClock(config: ClockConfig): string {
     baseTime: 0,
     isRunning: false,
     startTime: null,
+    pausedAt: null,
   };
 
   const [displayTime, setDisplayTime] = useState(() =>
@@ -48,6 +50,7 @@ export function useGameClock(config: ClockConfig): string {
     safeConfig.baseTime,
     safeConfig.isRunning,
     safeConfig.startTime,
+    safeConfig.pausedAt, // <--- Importante añadirlo a las dependencias
   ]);
 
   return displayTime;
@@ -57,19 +60,30 @@ export function useGameClock(config: ClockConfig): string {
  * Calcula el tiempo a mostrar basado en la configuración actual
  */
 function calculateDisplayTime(config: ClockConfig): string {
-  const { mode, baseTime, isRunning, startTime } = config;
+  const { mode, baseTime, isRunning, startTime, pausedAt } = config;
 
   // Protección contra NaN
   const safeBaseTime = isNaN(baseTime) ? 0 : baseTime;
 
-  // Modo estático o pausado: mostrar baseTime directamente
-  if (mode === "static" || !isRunning || startTime === null) {
+  // 1. Modo Estático: Siempre muestra baseTime
+  if (mode === "static") {
     return formatTime(safeBaseTime);
   }
 
-  // Calcular tiempo transcurrido desde startTime
-  const elapsedSeconds = (Date.now() - startTime) / 1000;
+  // 2. Cálculo de segundos transcurridos
+  let elapsedSeconds = 0;
 
+  if (startTime !== null) {
+    if (isRunning) {
+      // Si corre: Ahora - Inicio
+      elapsedSeconds = (Date.now() - startTime) / 1000;
+    } else if (pausedAt) {
+      // Si está pausado: Pausa - Inicio (Tiempo congelado)
+      elapsedSeconds = (pausedAt - startTime) / 1000;
+    }
+  }
+
+  // 3. Aplicar lógica según modo
   if (mode === "countdown") {
     // Cuenta atrás: baseTime - tiempo transcurrido (mínimo 0)
     const remaining = Math.max(0, safeBaseTime - elapsedSeconds);
@@ -82,6 +96,7 @@ function calculateDisplayTime(config: ClockConfig): string {
     return formatTime(Math.floor(accumulated));
   }
 
+  // Fallback
   return formatTime(safeBaseTime);
 }
 
