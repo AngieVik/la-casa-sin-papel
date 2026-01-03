@@ -172,71 +172,74 @@ const ChatModal: React.FC = () => {
         style={{ height: "85vh" }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-neutral-800 bg-neutral-950/80">
-          <div className="flex items-center gap-2">
-            <div className="p-1 bg-green-900/30 rounded border border-green-500/50">
+        <div className="flex items-center justify-between p-1 border-b rounded-t-3xl border-neutral-800 bg-neutral-950/80">
+          <div className="flex items-center gap-3">
+            <div className="p-1 ml-4 bg-green-900/30 rounded border border-green-500/50">
               <ShieldCheck size={18} className="text-green-500" />
             </div>
-            <div>
-              <h3 className="font-bold text-white text-sm uppercase tracking-wider">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-white text-sm tracking-wider">
                 Canal Encriptado
               </h3>
-              <span className="text-xs text-green-500 font-mono animate-pulse">
+              <span className="text-[10px] text-green-500 font-mono animate-pulse whitespace-nowrap mt-0.5">
                 ● Conexión Segura
               </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* GM: Create Room Button */}
-            {isGM && (
-              <button
-                onClick={() => setShowCreateRoomModal(true)}
-                className="p-2 rounded-full bg-indigo-900/30 hover:bg-indigo-900/50 text-indigo-400 hover:text-indigo-300 transition-colors"
-                title="Crear Sala"
-              >
-                <Plus size={20} />
-              </button>
-            )}
             <button
               onClick={toggleChat}
-              className="p-2 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
+              className="p-1 mr-4 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
             >
               <X size={24} />
             </button>
           </div>
         </div>
 
-        {/* Tabs - Scrollable */}
-        <div className="flex bg-neutral-950 border-b border-neutral-800 overflow-x-auto">
-          {allTabs.map((tab) => (
+        {/* Tabs - Scrollable with Create Room Button */}
+        <div className="flex items-center bg-neutral-950 border-b border-neutral-800 px-2">
+          <div className="flex-1 flex overflow-x-auto no-scrollbar">
+            {allTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center justify-center p-1 gap-1 ml-2 text-xs font-bold tracking-wider transition-all whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? "text-red-500 border-b-2 border-red-500 bg-neutral-900"
+                    : "text-neutral-500 hover:text-neutral-300"
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+                {/* GM: Settings button for room tabs */}
+                {isGM &&
+                  tab.id !== "global" &&
+                  tab.id !== "privado" &&
+                  activeTab === tab.id && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setManagingRoom(tab.id);
+                      }}
+                      className="ml-1 p-1 rounded hover:bg-neutral-700 text-neutral-400 hover:text-white"
+                    >
+                      <Settings size={12} />
+                    </button>
+                  )}
+              </button>
+            ))}
+          </div>
+
+          {/* GM: Create Room Button moved to tabs line */}
+          {isGM && (
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center justify-center gap-2 py-3 px-4 text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
-                activeTab === tab.id
-                  ? "text-red-500 border-b-2 border-red-500 bg-neutral-900"
-                  : "text-neutral-500 hover:text-neutral-300"
-              }`}
+              onClick={() => setShowCreateRoomModal(true)}
+              className="ml-2 p-1 m-1 aspect-[5/1] rounded bg-indigo-900/40 hover:bg-indigo-900/60 text-indigo-400 border border-indigo-500/30 transition-all flex items-center justify-center"
+              title="Crear Sala"
             >
-              {tab.icon}
-              {tab.label}
-              {/* GM: Settings button for room tabs */}
-              {isGM &&
-                tab.id !== "global" &&
-                tab.id !== "privado" &&
-                activeTab === tab.id && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setManagingRoom(tab.id);
-                    }}
-                    className="ml-1 p-1 rounded hover:bg-neutral-700 text-neutral-400 hover:text-white"
-                  >
-                    <Settings size={12} />
-                  </button>
-                )}
+              <Plus size={16} />
             </button>
-          ))}
+          )}
         </div>
 
         {/* Messages Area */}
@@ -277,8 +280,8 @@ const ChatModal: React.FC = () => {
                   >
                     {msg.role === "gm" && (
                       <div className="w-full text-center my-2">
-                        <span className="bg-red-900/20 text-red-500 text-xs font-bold px-2 py-0.5 rounded border border-red-900/50 uppercase tracking-widest">
-                          Mensaje del Director
+                        <span className="hidden bg-red-900/20 text-red-500 text-xs font-bold px-2 py-0.5 rounded border border-red-900/50 tracking-widest">
+                          Mensaje del GameMaster
                         </span>
                       </div>
                     )}
@@ -443,7 +446,7 @@ const ChatModal: React.FC = () => {
 
             <div className="p-4 space-y-4">
               <div>
-                <label className="block text-xs text-neutral-500 uppercase mb-1">
+                <label className="block text-xs text-neutral-500 mb-1">
                   Nombre de la Sala
                 </label>
                 <input
@@ -457,7 +460,7 @@ const ChatModal: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs text-neutral-500 uppercase mb-2">
+                <label className="block text-xs text-neutral-500 mb-2">
                   Seleccionar Jugadores
                 </label>
                 <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">

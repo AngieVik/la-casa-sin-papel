@@ -70,6 +70,7 @@ export interface RoomState {
   globalStates: string[]; // Estados globales (Día, Noche, etc.)
   playerStates: string[]; // Estados personales (Envenenado, etc.)
   publicStates: string[]; // Estados públicos (Vivo, Muerto, etc.)
+  roles: string[]; // Roles disponibles para asignar a jugadores
   // Chat rooms y notificaciones
   chatRooms: ChatRoom[];
   notifications: PlayerNotification[];
@@ -141,7 +142,12 @@ export interface AppStore {
   gmDeletePublicStateOption: (state: string) => void;
   gmTogglePlayerState: (playerId: string, state: string) => Promise<void>;
   gmTogglePublicState: (playerId: string, state: string) => Promise<void>;
-  gmSelectGame: (gameId: string) => Promise<void>;
+  gmSelectGame: (gameId: string | null) => Promise<void>;
+
+  // Role Management Actions
+  gmAddRole: (role: string) => void;
+  gmEditRole: (oldRole: string, newRole: string) => void;
+  gmDeleteRole: (role: string) => void;
 
   // Notification Actions
   gmSendGlobalMessage: (text: string) => Promise<void>;

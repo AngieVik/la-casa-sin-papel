@@ -1,20 +1,84 @@
 import React from "react";
-import { Users, CheckCircle2, Clock, Edit2 } from "lucide-react";
+import { Users, CheckCircle2, Clock, Edit2, BookOpen } from "lucide-react";
 import { Player } from "../../types";
+import { GAMES } from "../../constants/games";
 
 interface GMControlTabProps {
   players: Player[];
+  votes: Record<string, Record<string, boolean>>;
+  gameSelected: string | null;
+  onSelectGame: (gameId: string | null) => void;
   onEditPlayer: (playerId: string) => void;
 }
 
 const GMControlTab: React.FC<GMControlTabProps> = ({
   players,
+  votes,
+  gameSelected,
+  onSelectGame,
   onEditPlayer,
 }) => {
   const nonGMPlayers = players.filter((p) => !p.isGM);
 
   return (
     <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+      {/* Game Selector Section */}
+      <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl">
+        <h4 className="text-neutral-300 font-bold mb-2 flex items-center gap-2">
+          <BookOpen size={16} /> Selector de Juego
+        </h4>
+        <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-1">
+          {GAMES.map((game) => {
+            const gameVotes = votes[game.id]
+              ? Object.keys(votes[game.id]).length
+              : 0;
+            const isSelected = gameSelected === game.id;
+            return (
+              <button
+                key={game.id}
+                onClick={() => onSelectGame(isSelected ? null : game.id)}
+                className={`p-4 rounded-lg border text-left transition-all relative ${
+                  isSelected
+                    ? "bg-green-600/20 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)]"
+                    : "bg-neutral-900 border-neutral-700 hover:border-neutral-500"
+                }`}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h5
+                      className={`font-bold ${
+                        isSelected ? "text-green-400" : "text-white"
+                      }`}
+                    >
+                      {game.title}
+                    </h5>
+                    <p className="text-xs text-neutral-500">{game.desc}</p>
+                  </div>
+                  <div
+                    className={`flex items-center gap-1 p-1 rounded-full text-xs font-bold ${
+                      gameVotes > 0
+                        ? "bg-red-600 text-white"
+                        : "bg-neutral-800 text-neutral-500"
+                    }`}
+                  >
+                    {gameVotes}
+                  </div>
+                </div>
+                {isSelected && (
+                  <div className="absolute top-1 right-1">
+                    <CheckCircle2
+                      size={16}
+                      className="text-green-400 animate-pulse"
+                    />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Players Section */}
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider">
           Jugadores ({nonGMPlayers.length})

@@ -50,6 +50,7 @@ export const useStore = create<AppStore>((set, get) => ({
     globalStates: ["Día", "Noche"],
     playerStates: ["Envenenado", "Peruano", "De Viator"],
     publicStates: ["Vivo", "Muerto", "Carcel"],
+    roles: ["Jugador"],
     chatRooms: [],
     notifications: [],
     typing: {},
@@ -288,6 +289,7 @@ export const useStore = create<AppStore>((set, get) => ({
                 "De Viator",
               ],
               publicStates: data.publicStates || ["Vivo", "Muerto", "Carcel"],
+              roles: data.roles || ["Jugador"],
               chatRooms: data.chatRooms
                 ? Object.entries(data.chatRooms).map(
                     ([key, val]: [string, unknown]) => ({
@@ -647,8 +649,41 @@ export const useStore = create<AppStore>((set, get) => ({
     await update(playerRef, { publicStates: newStates });
   },
 
-  gmSelectGame: async (gameId: string) => {
+  gmSelectGame: async (gameId: string | null) => {
     await update(ref(db, ROOM_REF), { gameSelected: gameId });
+  },
+
+  // --- Role Management Actions ---
+  gmAddRole: (role: string) => {
+    const { room } = get();
+    const newRoles = [...room.roles, role];
+    update(ref(db, ROOM_REF), { roles: newRoles });
+  },
+
+  gmEditRole: (oldRole: string, newRole: string) => {
+    const { room } = get();
+    const newRoles = room.roles.map((r) => (r === oldRole ? newRole : r));
+    update(ref(db, ROOM_REF), { roles: newRoles });
+    // Also update any players with this role
+    room.players.forEach((player) => {
+      if (player.role === oldRole) {
+        update(ref(db, `${ROOM_REF}/players/${player.id}`), { role: newRole });
+      }
+    });
+  },
+
+  gmDeleteRole: (role: string) => {
+    const { room } = get();
+    const newRoles = room.roles.filter((r) => r !== role);
+    update(ref(db, ROOM_REF), { roles: newRoles });
+    // Reset any players with this role to default
+    room.players.forEach((player) => {
+      if (player.role === role) {
+        update(ref(db, `${ROOM_REF}/players/${player.id}`), {
+          role: "Jugador",
+        });
+      }
+    });
   },
 
   // --- Notification Actions ---

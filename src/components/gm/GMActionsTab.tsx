@@ -216,13 +216,13 @@ const GMActionsTab: React.FC<GMActionsTabProps> = ({
         </div>
 
         {/* Reloj del Juego */}
-        <div className="space-y-4">
-          <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-2">
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-neutral-500 tracking-wider flex items-center gap-2 animate-in slide-in-from-right-4 duration-300">
             <Clock size={16} /> Reloj del Juego
           </label>
 
           {/* INPUT EDITABLE BLINDADO */}
-          <div className="bg-neutral-950 w-[150px] rounded-xl border border-neutral-800">
+          <div className="bg-neutral-950 w-[150px] rounded-xl border border-neutral-800 animate-in slide-in-from-right-4 duration-300">
             <input
               type="text"
               placeholder="00:00"
@@ -235,7 +235,7 @@ const GMActionsTab: React.FC<GMActionsTabProps> = ({
           </div>
 
           {/* BOTONES DE CONTROL - Grid 2 columnas */}
-          <div className="grid grid-cols-2 gap-1">
+          <div className="grid grid-cols-2 gap-1 animate-in slide-in-from-right-4 duration-300">
             {/* TARJETA CUENTA ATRÁS */}
             <button
               onClick={() => {
@@ -245,24 +245,31 @@ const GMActionsTab: React.FC<GMActionsTabProps> = ({
                   gmStartClock("countdown");
                 }
               }}
-              className={`flex flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all hover:scale-105 ${
+              className={`flex flex-row sm:flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all hover:scale-105 ${
                 clockConfig.mode === "countdown" && clockConfig.isRunning
                   ? "bg-orange-900/30 border-orange-500 text-orange-400"
                   : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-orange-600"
               }`}
             >
-              {clockConfig.mode === "countdown" && clockConfig.isRunning ? (
-                <Pause size={25} className="text-orange-500" />
-              ) : (
-                <Play
-                  size={25}
-                  fill="currentColor"
-                  className="text-orange-500"
-                />
-              )}
-              <div className="flex items-center gap-2">
+              {/* Icono de modo y Texto (se mueve abajo en desktop, se queda a la izquierda en móvil) */}
+              <div className="flex items-center gap-2 order-1 sm:order-2">
                 <Hourglass size={20} />
-                <span className="font-bold text-sm">Cuenta Atrás</span>
+                <span className="hidden sm:inline font-bold text-sm">
+                  Cuenta Atrás
+                </span>
+              </div>
+
+              {/* Botón Play/Pause (se mueve arriba en desktop, se queda a la derecha en móvil) */}
+              <div className="order-2 sm:order-1">
+                {clockConfig.mode === "countdown" && clockConfig.isRunning ? (
+                  <Pause size={25} className="text-orange-500" />
+                ) : (
+                  <Play
+                    size={25}
+                    fill="currentColor"
+                    className="text-orange-500"
+                  />
+                )}
               </div>
             </button>
 
@@ -275,41 +282,49 @@ const GMActionsTab: React.FC<GMActionsTabProps> = ({
                   gmStartClock("stopwatch");
                 }
               }}
-              className={`flex flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all hover:scale-105 ${
+              className={`flex flex-row sm:flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all hover:scale-105 ${
                 clockConfig.mode === "stopwatch" && clockConfig.isRunning
                   ? "bg-green-900/30 border-green-500 text-green-400"
                   : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-green-600"
               }`}
             >
-              {clockConfig.mode === "stopwatch" && clockConfig.isRunning ? (
-                <Pause size={25} className="text-green-500" />
-              ) : (
-                <Play
-                  size={25}
-                  fill="currentColor"
-                  className="text-green-500"
-                />
-              )}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 order-1 sm:order-2">
                 <Timer size={20} />
-                <span className="font-bold text-sm">Cronómetro</span>
+                <span className="hidden sm:inline font-bold text-sm">
+                  Cronómetro
+                </span>
+              </div>
+
+              <div className="order-2 sm:order-1">
+                {clockConfig.mode === "stopwatch" && clockConfig.isRunning ? (
+                  <Pause size={25} className="text-green-500" />
+                ) : (
+                  <Play
+                    size={25}
+                    fill="currentColor"
+                    className="text-green-500"
+                  />
+                )}
               </div>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="mt-2 p-2 bg-red-950/20 border border-red-900/30 rounded-xl">
-        <h4 className="text-red-500 font-bold mb-4 flex items-center gap-2">
-          <Settings size={16} /> Zona peligrosa
-        </h4>
-        <div className="flex gap-4 flex-wrap">
-          <button
-            onClick={onShowShutdownConfirm}
-            className="px-2 py-1 bg-red-900/20 text-red-400 border border-red-900/50 rounded-lg hover:bg-red-900 hover:text-white text-sm transition-colors flex items-center gap-2"
-          >
-            <PowerOff size={16} /> SHUTDOWN (Reset Total)
-          </button>
+      <div className="grid grid-cols-2 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 animate-in slide-in-from-right-4 duration-300">
+        <div className="mt-2 p-2 bg-red-950/20 border border-red-900/30 rounded-xl ">
+          <h4 className="text-red-500 font-bold mb-4 flex items-center gap-2">
+            <Settings size={16} /> Zona peligrosa
+          </h4>
+          <div className="flex gap-4 flex-wrap">
+            <button
+              onClick={onShowShutdownConfirm}
+              className="p-1 bg-red-900/20 text-red-400 border border-red-900/50 rounded-lg hover:bg-red-900 hover:text-white text-sm transition-colors flex items-center gap-2"
+            >
+              <PowerOff size={16} /> SHUTDOWN{" "}
+              <span className="hidden sm:inline">(Reset Total)</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
