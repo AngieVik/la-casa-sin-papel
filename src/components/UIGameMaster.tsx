@@ -147,7 +147,7 @@ const UIGameMaster: React.FC = () => {
           <button
             onClick={() => gm.setShowResetConfirm(true)}
             className="bg-neutral-800 hover:bg-neutral-700 text-yellow-500 border border-neutral-700 p-2 rounded-xl transition-colors"
-            title="Reiniciar (enviar todos al patio)"
+            title="Refrescar sesión"
           >
             <RotateCcw size={20} />
           </button>
@@ -252,9 +252,9 @@ const UIGameMaster: React.FC = () => {
       {/* END SESSION CONFIRMATION MODAL */}
       {gm.showEndSessionConfirm && (
         <ConfirmModal
-          title="Finalizar Operativo"
-          message="¿FINALIZAR OPERATIVO? Se borrará el chat y el estado global volverá a espera."
-          confirmText="Sí, salir"
+          title="Cerrar Sala"
+          message="¿Cerrar Sala? Se cerrará la sesión actual y enviará a todos al log-in."
+          confirmText="Sí, cerrar"
           cancelText="Cancelar"
           variant="danger"
           onConfirm={gm.handleEndSession}
@@ -278,9 +278,9 @@ const UIGameMaster: React.FC = () => {
       {/* SOFT RESET CONFIRMATION MODAL */}
       {gm.showResetConfirm && (
         <ConfirmModal
-          title="Reiniciar Partida"
-          message="Se enviará a todos los jugadores al patio sin cerrar sesiones. ¿Continuar?"
-          confirmText="Reiniciar"
+          title="Refrescar Sesión"
+          message="Se forzara un refresco de la sesión a todos los jugadores."
+          confirmText="Refrescar"
           cancelText="Cancelar"
           variant="warning"
           onConfirm={gm.handleSoftReset}

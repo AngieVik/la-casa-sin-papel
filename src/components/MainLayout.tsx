@@ -246,7 +246,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       {showRefreshConfirm && (
         <ConfirmModal
           title="Refrescar Página"
-          message="¿Refrescar la página? Cualquier dato no guardado se perderá."
+          message="A veces ayuda, otras no tanto..."
           confirmText="Refrescar"
           cancelText="Cancelar"
           variant="info"
