@@ -26,7 +26,8 @@ const DEFAULT_CLOCK_CONFIG = {
   mode: "static" as const,
   baseTime: 0,
   isRunning: false,
-  startTime: null as number | null,
+  startTime: null,
+  pausedAt: null,
 };
 
 export const useStore = create<AppStore>((set, get) => ({
@@ -385,52 +386,45 @@ export const useStore = create<AppStore>((set, get) => ({
     update(ref(db, ROOM_REF), { clockConfig: newConfig });
   },
 
+  // --- GM Clock Actions (VERSIÓN OPTIMIZADA) ---
+
   gmStartClock: (mode) => {
     const { room } = get();
     const config = room.clockConfig || DEFAULT_CLOCK_CONFIG;
+    if (config.isRunning) return; // Ya está corriendo
 
-    // If already running, do nothing
-    if (config.isRunning) return;
+    const now = Date.now();
 
-    // Prevent starting countdown if already at 0
-    if (mode === "countdown" && config.baseTime <= 0) return;
+    // Si venimos de una pausa, ajustamos el startTime para no perder el tiempo que ya pasó
+    let newStartTime = now;
+    if (config.pausedAt && config.startTime) {
+      const timePaused = config.pausedAt - config.startTime;
+      newStartTime = now - timePaused;
+    }
 
-    // Start the clock with current timestamp
-    const newConfig = {
-      mode,
-      baseTime: config.baseTime,
-      isRunning: true,
-      startTime: Date.now(),
-    };
-
-    update(ref(db, ROOM_REF), { clockConfig: newConfig });
+    update(ref(db, ROOM_REF), {
+      clockConfig: {
+        mode,
+        baseTime: config.baseTime,
+        isRunning: true,
+        startTime: newStartTime,
+        pausedAt: null,
+      },
+    });
   },
 
   gmPauseClock: () => {
     const { room } = get();
     const config = room.clockConfig || DEFAULT_CLOCK_CONFIG;
+    if (!config.isRunning) return;
 
-    if (!config.isRunning || config.startTime === null) return;
-
-    // Calculate elapsed time since start
-    const elapsedSeconds = (Date.now() - config.startTime) / 1000;
-
-    // Calculate new baseTime depending on mode
-    let newBaseTime = config.baseTime;
-    if (config.mode === "countdown") {
-      newBaseTime = Math.max(0, config.baseTime - elapsedSeconds);
-    } else if (config.mode === "stopwatch") {
-      newBaseTime = config.baseTime + elapsedSeconds;
-    }
-
-    const newConfig = {
-      mode: config.mode,
-      baseTime: Math.floor(newBaseTime),
-      isRunning: false,
-      startTime: null,
-    };
-
-    update(ref(db, ROOM_REF), { clockConfig: newConfig });
+    update(ref(db, ROOM_REF), {
+      clockConfig: {
+        ...config,
+        isRunning: false,
+        pausedAt: Date.now(), // Guardamos cuándo se pausó
+      },
+    });
   },
 
   gmResetClock: () => {

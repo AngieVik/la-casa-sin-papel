@@ -62,6 +62,7 @@ export interface RoomState {
     baseTime: number; // Tiempo acumulado en segundos
     isRunning: boolean; // Si el reloj está corriendo
     startTime: number | null; // Timestamp de cuando se inició (null si pausado/estático)
+    pausedAt: number | null; // Timestamp de cuando se pauso (null si no pausado)
   };
   tickerSpeed: number; // Velocidad en segundos del ciclo
   channels: Record<string, ChatMessage[]>; // { global: [], private_uid: [], room_name: [] }
