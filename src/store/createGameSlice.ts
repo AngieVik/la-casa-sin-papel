@@ -72,19 +72,28 @@ export const createGameSlice: StateCreator<
       if (data) {
         // PRIORITY: Detect shutdown status
         if (data.status === "shutdown") {
-          sessionStorage.clear();
-          set({
-            user: { nickname: "", isGM: false, id: null },
-            ui: {
-              isChatOpen: false,
-              isSync: false,
-              currentView: "login",
-              isLoading: false,
-              error: null,
-              activeChannel: "global",
-            },
-          });
-          return; // Don't process any more data
+          const currentUser = get().user;
+
+          // Si el usuario es GM, permitir quedarse
+          if (currentUser.isGM) {
+            // El GM puede ver la sala cerrada pero no se desconecta
+            // Solo actualizar el estado de la room
+          } else {
+            // Jugadores normales: desconectar y enviar al login
+            sessionStorage.clear();
+            set({
+              user: { nickname: "", isGM: false, id: null },
+              ui: {
+                isChatOpen: false,
+                isSync: false,
+                currentView: "login",
+                isLoading: false,
+                error: null,
+                activeChannel: "global",
+              },
+            });
+            return; // Don't process any more data for non-GM users
+          }
         }
 
         const playersList: Player[] = data.players

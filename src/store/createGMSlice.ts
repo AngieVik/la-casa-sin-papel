@@ -65,6 +65,7 @@ export const createGMSlice: StateCreator<
     | "gmRemovePlayerFromRoom"
     | "gmCloseChatRoom"
     | "gmTurnOffSession"
+    | "gmOpenRoom"
     | "prepareGame"
     | "setGamePhase"
     | "stopGame"
@@ -206,23 +207,44 @@ export const createGMSlice: StateCreator<
   },
 
   gmTurnOffSession: async () => {
-    // Objetivo: cerrar la sesión de todos y limpiar la partida totalmente (Hard Wipe).
-    const updates = {
-      players: null,
+    // Objetivo: cerrar la sala, expulsar a todos los jugadores (excepto GM) y poner status shutdown
+    const { room, user } = get();
+    const updates: Record<string, unknown> = {
+      status: "shutdown",
+      globalState: "Sala Cerrada",
       votes: null,
       channels: null,
       chatRooms: null,
-      status: "waiting",
-      globalState: "Sesión Finalizada",
+      notifications: null,
+      gameSelected: null,
+      gameStatus: "lobby",
+      gamePhase: 0,
       clockConfig: {
         ...DEFAULT_CLOCK_CONFIG,
         mode: "static",
         baseTime: 0,
         isRunning: false,
       },
-      ticker: "",
+      ticker: "Sala cerrada por el GM.",
     };
+
+    // Eliminar todos los jugadores EXCEPTO el GM actual
+    room.players.forEach((player) => {
+      if (player.id !== user.id) {
+        updates[`players/${player.id}`] = null;
+      }
+    });
+
     await update(ref(db, ROOM_REF), updates);
+  },
+
+  gmOpenRoom: async () => {
+    // Encender la sala desde shutdown
+    await update(ref(db, ROOM_REF), {
+      status: "waiting",
+      globalState: "Sala Abierta",
+      ticker: "Bienvenidos. La sala está abierta.",
+    });
   },
 
   gmKickPlayer: async (playerId: string) => {
@@ -709,9 +731,19 @@ export const createGMSlice: StateCreator<
   },
 
   gmForceRefreshAll: async () => {
-    // Forzar resincronización de todos los clientes
-    await update(ref(db, ROOM_REF), {
+    // Forzar resincronización de todos los clientes + limpiar jugadores offline
+    const { room } = get();
+    const updates: Record<string, unknown> = {
       forceRefreshTimestamp: Date.now(),
+    };
+
+    // Eliminar jugadores offline de Firebase
+    room.players.forEach((player) => {
+      if (!player.isGM && player.status === "offline") {
+        updates[`players/${player.id}`] = null;
+      }
     });
+
+    await update(ref(db, ROOM_REF), updates);
   },
 });

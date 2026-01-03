@@ -26,6 +26,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isGM = useStore((state) => state.user.isGM);
   const tickerSpeed = useStore((state) => state.room.tickerSpeed);
   const setActiveChannel = useStore((state) => state.setActiveChannel);
+  const logoutPlayer = useStore((state) => state.logoutPlayer);
 
   // Calculate clock time locally using the passive hook
   const timeString = useGameClock(clockConfig);
@@ -230,12 +231,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       {showLogoutConfirm && (
         <ConfirmModal
           title="Cerrar Sesión"
-          message="¿Seguro que quieres desconectarte?"
+          message="¿Seguro que quieres cerrar sesión? Tu sesión será eliminada de Firebase."
           confirmText="Sí, salir"
           cancelText="Mejor me quedo"
           variant="warning"
-          onConfirm={() => {
-            setCurrentView("login");
+          onConfirm={async () => {
+            await logoutPlayer();
             setShowLogoutConfirm(false);
           }}
           onCancel={() => setShowLogoutConfirm(false)}

@@ -26,6 +26,7 @@ export const createAuthSlice: StateCreator<
     | "restoreAuthSession"
     | "cleanupOldPlayers"
     | "loginToFirebase"
+    | "logoutPlayer"
     | "setCurrentView"
   >
 > = (set, get) => ({
@@ -193,5 +194,42 @@ export const createAuthSlice: StateCreator<
         ui: { ...state.ui, isLoading: false, error: errorMessage },
       }));
     }
+  },
+
+  logoutPlayer: async () => {
+    const { user } = get();
+
+    // 1. Eliminar la sesión del jugador de Firebase
+    if (user.id) {
+      try {
+        const playerRef = ref(db, `${ROOM_REF}/players/${user.id}`);
+        await remove(playerRef);
+      } catch (e) {
+        console.error("Error removing player session:", e);
+      }
+    }
+
+    // 2. Limpiar sessionStorage
+    sessionStorage.clear();
+
+    // 3. Sign out de Firebase Auth
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error("Error signing out:", e);
+    }
+
+    // 4. Reset del estado local
+    set({
+      user: { nickname: "", isGM: false, id: null },
+      ui: {
+        isChatOpen: false,
+        isSync: false,
+        currentView: "login",
+        isLoading: false,
+        error: null,
+        activeChannel: "global",
+      },
+    });
   },
 });

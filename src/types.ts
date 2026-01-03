@@ -146,6 +146,7 @@ export interface AppStore {
   restoreAuthSession: () => Promise<void>;
   cleanupOldPlayers: () => Promise<void>;
   loginToFirebase: (nickname: string, isGM: boolean) => Promise<void>;
+  logoutPlayer: () => Promise<void>;
   subscribeToRoom: () => void;
   sendChatMessage: (text: string, channel?: string) => Promise<void>;
   updatePlayerStatus: (ready: boolean) => Promise<void>;
@@ -173,6 +174,7 @@ export interface AppStore {
   gmResetRoom: () => Promise<void>;
   gmTogglePlayerRole: (playerId: string, role: string) => Promise<void>;
   gmTurnOffSession: () => Promise<void>;
+  gmOpenRoom: () => Promise<void>;
 
   // State Management Actions
   gmAddGlobalState: (state: string) => void;

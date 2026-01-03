@@ -153,9 +153,13 @@ const UIGameMaster: React.FC = () => {
           </button>
 
           <button
-            onClick={() => gm.setShowEndSessionConfirm(true)}
-            className="bg-neutral-800 hover:bg-neutral-700 text-neutral-400 border border-neutral-700 p-2 rounded-xl transition-colors"
-            title="Desconectar"
+            onClick={gm.handleTogglePower}
+            className={`border p-2 rounded-xl transition-colors ${
+              gm.isRoomClosed
+                ? "bg-green-900/50 hover:bg-green-800 text-green-400 border-green-700"
+                : "bg-neutral-800 hover:bg-neutral-700 text-neutral-400 border-neutral-700"
+            }`}
+            title={gm.isRoomClosed ? "Encender Sala" : "Cerrar Sala"}
           >
             <Power size={20} />
           </button>
@@ -253,7 +257,7 @@ const UIGameMaster: React.FC = () => {
       {gm.showEndSessionConfirm && (
         <ConfirmModal
           title="Cerrar Sala"
-          message="¿Cerrar Sala? Se cerrará la sesión actual y enviará a todos al log-in."
+          message="¿Cerrar Sala? Se enviará a todos los jugadores al login y sus sesiones serán eliminadas."
           confirmText="Sí, cerrar"
           cancelText="Cancelar"
           variant="danger"

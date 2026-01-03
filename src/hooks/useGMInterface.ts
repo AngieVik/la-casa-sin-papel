@@ -29,6 +29,7 @@ export const useGMInterface = () => {
   const gmStartGame = useStore((state) => state.gmStartGame);
   const gmEndGame = useStore((state) => state.gmEndGame);
   const gmTurnOffSession = useStore((state) => state.gmTurnOffSession);
+  const gmOpenRoom = useStore((state) => state.gmOpenRoom);
   const gmSetStaticTime = useStore((state) => state.gmSetStaticTime);
   const gmKickPlayer = useStore((state) => state.gmKickPlayer);
   const gmRemovePlayer = useStore((state) => state.gmRemovePlayer);
@@ -132,6 +133,19 @@ export const useGMInterface = () => {
     setCurrentView("login");
     setShowEndSessionConfirm(false);
   };
+
+  const handleTogglePower = async () => {
+    // Si la sala está cerrada (shutdown), encenderla
+    if (status === "shutdown") {
+      await gmOpenRoom();
+    } else {
+      // Si la sala está abierta, mostrar confirmación para cerrarla
+      setShowEndSessionConfirm(true);
+    }
+  };
+
+  // Computed: Is room closed?
+  const isRoomClosed = status === "shutdown";
 
   // Toast helper for GM action confirmations
   const showGmToastMsg = (msg: string) => {
@@ -289,7 +303,12 @@ export const useGMInterface = () => {
     handleExpelPlayer,
     handleSoftReset,
     handleKickPlayer,
+    handleTogglePower,
     gmRemovePlayer,
+    gmOpenRoom,
+
+    // Computed state
+    isRoomClosed,
 
     // Game Engine Actions
     prepareGame,
