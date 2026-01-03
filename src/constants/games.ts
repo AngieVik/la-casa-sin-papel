@@ -1,5 +1,5 @@
 import { GameModule } from "../types";
-import TestGame from "../games/TestGame";
+import TestGame, { testGameMeta } from "../games/TestGame";
 
 /**
  * GAMES - Registro de juegos disponibles
@@ -7,16 +7,7 @@ import TestGame from "../games/TestGame";
  */
 export const GAMES: GameModule[] = [
   {
-    id: "test_game",
-    title: "Juego de Prueba",
-    description: "Un juego simple para testear el motor de juegos.",
-    minRoles: ["Dado", "Moneda"],
-    specificData: {
-      roles: ["Dado", "Moneda"],
-      playerStates: ["Afortunado"],
-      publicStates: ["Ganador"],
-      globalStates: ["Ronda Activa"],
-    },
+    ...testGameMeta,
     Component: TestGame,
   },
 ];

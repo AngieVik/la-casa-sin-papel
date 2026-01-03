@@ -1,5 +1,20 @@
 import React, { useState } from "react";
 import { Dice5, CircleDot } from "lucide-react";
+import { GameMetadata } from "../types";
+
+export const testGameMeta: GameMetadata = {
+  id: "test_game",
+  title: "Juego de Prueba",
+  description: "Un juego simple para testear el motor de juegos.",
+  minRoles: ["Dado", "Moneda"],
+  specificData: {
+    roles: ["Dado", "Moneda"],
+    playerStates: ["Afortunado"],
+    publicStates: ["Ganador"],
+    globalStates: ["Ronda Activa"],
+  },
+};
+
 const TestGame: React.FC = () => {
   const [diceResult, setDiceResult] = useState<number | null>(null);
   const [boolResult, setBoolResult] = useState<boolean | null>(null);
@@ -35,11 +50,9 @@ const TestGame: React.FC = () => {
     <div className="space-y-6 p-4">
       <div className="text-center">
         <h2 className="text-2xl font-black text-white mb-2">
-          🎮 Juego de Prueba
+          🎮 {testGameMeta.title}
         </h2>
-        <p className="text-neutral-500 text-sm">
-          Prueba las mecánicas básicas del Game Engine
-        </p>
+        <p className="text-neutral-500 text-sm">{testGameMeta.description}</p>
       </div>
 
       {/* Resultado Display */}

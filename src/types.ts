@@ -15,12 +15,15 @@ export interface GameSpecificData {
   globalStates: string[]; // Ej: ["Niebla"]
 }
 
-export interface GameModule {
+export interface GameMetadata {
   id: string;
   title: string;
   description: string;
   minRoles: string[]; // Roles mínimos requeridos para Fase 0
   specificData: GameSpecificData; // Datos que se suman a los defaults
+}
+
+export interface GameModule extends GameMetadata {
   Component: React.ComponentType; // La pantalla de juego (Fase 1+)
 }
 
