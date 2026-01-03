@@ -1,5 +1,5 @@
 import { StateCreator } from "zustand";
-import { AppStore } from "../types";
+import { AppStore, Player } from "../types";
 import { db, auth } from "../firebaseConfig";
 import {
   ref,
@@ -113,13 +113,14 @@ export const createAuthSlice: StateCreator<
 
       if (snapshot.exists()) {
         const players = snapshot.val();
-        const oneHourAgo = Date.now() - 60 * 60 * 1000;
+        // Reduce timeout to 10 minutes (10 * 60 * 1000)
+        const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
 
         Object.entries(players).forEach(
-          async ([playerId, playerData]: [string, any]) => {
+          async ([playerId, playerData]: [string, Player]) => {
             if (!playerData.isGM && playerData.status === "offline") {
               const lastSeen = playerData.lastSeen || 0;
-              if (lastSeen < oneHourAgo) {
+              if (lastSeen < tenMinutesAgo) {
                 await remove(ref(db, `${ROOM_REF}/players/${playerId}`));
               }
             }

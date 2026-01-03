@@ -206,33 +206,64 @@ export const createGMSlice: StateCreator<
   },
 
   gmResetRoom: async () => {
-    const { room } = get();
-
-    // Usamos la constante segura para forzar una limpieza real
-    const safeClockConfig = DEFAULT_CLOCK_CONFIG;
-
-    const updates: Record<string, unknown> = {
+    // Definir estado inicial limpio para sobrescribir TODO
+    const initialRoomState = {
       status: "waiting",
+      // No channels, chatRooms, votes, notifications
       channels: null,
-      votes: null,
-      // Clear chat rooms and notifications
       chatRooms: null,
+      votes: null,
       notifications: null,
-      // Esto sobrescribe CUALQUIER error en la base de datos
-      clockConfig: safeClockConfig,
+      clockConfig: {
+        ...DEFAULT_CLOCK_CONFIG,
+        mode: "static",
+        baseTime: 0,
+        isRunning: false,
+      },
       globalState: "Arrancando sesión...",
       ticker: "Sistema reiniciado. Mantengan la calma.",
+      // Players object will be constructed below to keep only basics
+      players: {},
+      // Keep definitions but clear usage if needed?
+      // The requirement says "sobrescribir completamente".
+      // But we probably want to keep the players logged in, just reset their state.
     };
 
-    // Reset ALL player data
+    const { room } = get();
+
+    // Construct the players object to preserve connected users but reset their game state
+    const resetPlayers: Record<string, any> = {};
     room.players.forEach((p) => {
-      updates[`players/${p.id}/ready`] = false;
-      updates[`players/${p.id}/playerStates`] = [];
-      updates[`players/${p.id}/publicStates`] = [];
-      updates[`players/${p.id}/role`] = "Player";
+      resetPlayers[p.id] = {
+        ...p,
+        ready: false,
+        playerStates: [],
+        publicStates: [],
+        role: "Player", // Reset role to default
+        // Preserve nickname, isGM, id, status, lastSeen
+      };
     });
 
-    await update(ref(db, ROOM_REF), updates);
+    // Merge players into the initial state
+    const stateToSet = {
+      ...initialRoomState,
+      players: resetPlayers,
+      // Preserve option lists if desired, otherwise they rely on default code values if they are hardcoded.
+      // Assuming dynamic lists should be preserved or reset?
+      // "sobrescribir completamente el nodo rooms/defaultRoom, garantizando que no queden datos basura"
+      // If we want to keep the *definitions* (like roles list, states list), we should copy them from current state
+      // OR reset them to defaults.
+      // Let's assume we keep the configurations (roles, globalStates options, etc) but reset the *gameplay* elements.
+      // However, the prompt says "garantizando que no queden datos basura".
+      // Let's keep the lists (roles, globalStates, playerStates options, publicStates options)
+      // so the GM doesn't lose their customized lists, but reset the *values*.
+      roles: room.roles,
+      globalStates: room.globalStates,
+      playerStates: room.playerStates,
+      publicStates: room.publicStates,
+    };
+
+    await firebaseSet(ref(db, ROOM_REF), stateToSet);
   },
 
   gmUpdatePlayerRole: async (playerId: string, role: string) => {
