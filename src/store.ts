@@ -192,9 +192,9 @@ export const useStore = create<AppStore>((set, get) => ({
         lastSeen: Date.now(),
       });
 
-      // Clear typing status on disconnect
-      const typingRef = ref(db, `${ROOM_REF}/typing`);
-      onDisconnect(typingRef).remove();
+      // Clear only THIS user's typing status on disconnect
+      const userTypingRef = ref(db, `${ROOM_REF}/typing/global/${uid}`);
+      onDisconnect(userTypingRef).remove();
 
       if (isGM) {
         get().cleanupOldPlayers();

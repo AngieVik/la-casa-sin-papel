@@ -9,23 +9,7 @@ import {
   Info,
 } from "lucide-react";
 import ModalWrapper from "./ModalWrapper";
-
-const JUEGOS = [
-  {
-    id: "juego1",
-    title: "Atraco al Banco",
-    desc: "Gestión de recursos y tiempo.",
-  },
-  { id: "juego2", title: "El Topo", desc: "Roles ocultos y deducción." },
-  { id: "juego3", title: "Protocolo Fantasma", desc: "Hackeo y sigilo." },
-  {
-    id: "juego4",
-    title: "Motín en la Prisión",
-    desc: "Acción y control de áreas.",
-  },
-  { id: "juego5", title: "La Fuga", desc: "Cooperativo contra reloj." },
-  { id: "juego6", title: "Negociación", desc: "Social y bluffing." },
-];
+import { GAMES } from "../constants/games";
 
 const PatioView: React.FC = () => {
   const players = useStore((state) => state.room.players);
@@ -39,7 +23,7 @@ const PatioView: React.FC = () => {
   const isReady = me?.ready || false;
 
   const [selectedGame, setSelectedGame] = React.useState<
-    (typeof JUEGOS)[0] | null
+    (typeof GAMES)[number] | null
   >(null);
 
   const getVoteCount = (juegoId: string) => {
@@ -59,7 +43,7 @@ const PatioView: React.FC = () => {
           <BookOpen className="w-5 h-5" /> SELECCIÓN DE MISIÓN
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {JUEGOS.map((juego) => (
+          {GAMES.map((juego) => (
             <div
               key={juego.id}
               onClick={() => setSelectedGame(juego)}

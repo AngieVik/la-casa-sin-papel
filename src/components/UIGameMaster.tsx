@@ -36,6 +36,8 @@ import {
 import ModalWrapper from "./ModalWrapper";
 import ConfirmModal from "./ConfirmModal";
 import { useGameClock, formatTimeToMMSS } from "../hooks/useGameClock";
+import { GAMES } from "../constants/games";
+import { SOUNDS } from "../constants/sounds";
 
 type TabID = "control" | "narrative" | "actions";
 
@@ -435,26 +437,7 @@ const UIGameMaster: React.FC = () => {
                 <BookOpen size={16} /> Selector de Juego
               </h4>
               <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-1">
-                {[
-                  {
-                    id: "juego1",
-                    title: "Atraco al Banco",
-                    desc: "Gestión de recursos",
-                  },
-                  { id: "juego2", title: "El Topo", desc: "Roles ocultos" },
-                  {
-                    id: "juego3",
-                    title: "Protocolo Fantasma",
-                    desc: "Hackeo y sigilo",
-                  },
-                  {
-                    id: "juego4",
-                    title: "Motín en la Prisión",
-                    desc: "Control de áreas",
-                  },
-                  { id: "juego5", title: "La Fuga", desc: "Cooperativo" },
-                  { id: "juego6", title: "Negociación", desc: "Bluffing" },
-                ].map((game) => {
+                {GAMES.map((game) => {
                   const gameVotes = votes[game.id]
                     ? Object.keys(votes[game.id]).length
                     : 0;
@@ -725,13 +708,7 @@ const UIGameMaster: React.FC = () => {
                 </button>
                 {showGlobalSoundDropdown && (
                   <div className="absolute top-full left-0 right-0 mt-2 bg-neutral-800 border border-neutral-700 rounded-lg shadow-xl z-20 max-h-48 overflow-y-auto">
-                    {[
-                      { id: "gong", emoji: "🔔", name: "GONG" },
-                      { id: "aullido", emoji: "🐺", name: "Aullido" },
-                      { id: "gallo", emoji: "🐓", name: "Gallo" },
-                      { id: "risabruja", emoji: "🧙‍♀️", name: "Risa Bruja" },
-                      { id: "reallynigga", emoji: "😤", name: "Really Nigga" },
-                    ].map((sound) => (
+                    {SOUNDS.map((sound) => (
                       <button
                         key={sound.id}
                         onClick={() => {
@@ -1131,13 +1108,7 @@ const UIGameMaster: React.FC = () => {
                 </button>
                 {showSoundDropdown && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-neutral-800 border border-neutral-700 rounded-lg shadow-xl z-20 max-h-48 overflow-y-auto">
-                    {[
-                      { id: "gong", emoji: "🔔", name: "GONG" },
-                      { id: "aullido", emoji: "🐺", name: "Aullido" },
-                      { id: "gallo", emoji: "🐓", name: "Gallo" },
-                      { id: "risabruja", emoji: "🧙‍♀️", name: "Risa Bruja" },
-                      { id: "reallynigga", emoji: "😤", name: "Really Nigga" },
-                    ].map((sound) => (
+                    {SOUNDS.map((sound) => (
                       <button
                         key={sound.id}
                         onClick={() => {

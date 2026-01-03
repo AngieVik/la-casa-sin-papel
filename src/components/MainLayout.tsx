@@ -1,14 +1,7 @@
 import React, { useEffect } from "react";
 import { useStore } from "../store";
 import ChatModal from "./ChatModal";
-import {
-  MessageCircle,
-  Clock,
-  RefreshCw,
-  LogOut,
-  UserPen,
-  ShieldAlert,
-} from "lucide-react";
+import { MessageCircle, Clock, RefreshCw, LogOut, UserPen } from "lucide-react";
 import ModalWrapper from "./ModalWrapper";
 import ConfirmModal from "./ConfirmModal";
 import { ref, update as firebaseUpdate } from "firebase/database";

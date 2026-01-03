@@ -15,15 +15,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { useStore } from "../store";
-
-// Sound config with emoji and name
-const SOUNDS: Record<string, { emoji: string; name: string }> = {
-  gong: { emoji: "🔔", name: "GONG" },
-  aullido: { emoji: "🐺", name: "Aullido" },
-  gallo: { emoji: "🐓", name: "Gallo" },
-  risabruja: { emoji: "🧙‍♀️", name: "Risa Bruja" },
-  reallynigga: { emoji: "😤", name: "Really Nigga" },
-};
+import { SOUNDS, getSoundById } from "../constants/sounds";
 
 // Notification history item
 interface NotificationHistoryItem {
@@ -117,7 +109,7 @@ const UIPlayer: React.FC = () => {
         case "sound":
           const soundId = notification.payload.soundId || "gong";
           const audioEl = audioRefs.current[soundId];
-          const soundInfo = SOUNDS[soundId];
+          const soundInfo = getSoundById(soundId);
 
           if (audioEl && soundInfo) {
             audioEl.currentTime = 0;
@@ -180,13 +172,13 @@ const UIPlayer: React.FC = () => {
   return (
     <div className="max-w-xl mx-auto space-y-6 animate-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Hidden audio elements for all sounds */}
-      {Object.keys(SOUNDS).map((soundId) => (
+      {SOUNDS.map((sound) => (
         <audio
-          key={soundId}
+          key={sound.id}
           ref={(el) => {
-            audioRefs.current[soundId] = el;
+            audioRefs.current[sound.id] = el;
           }}
-          src={`/sounds/${soundId}.mp3`}
+          src={`/sounds/${sound.id}.mp3`}
           preload="auto"
         />
       ))}
