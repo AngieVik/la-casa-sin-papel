@@ -55,7 +55,7 @@ const UIGameMaster: React.FC = () => {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex bg-neutral-900 p-1 rounded-xl border border-neutral-800">
+        <div className="flex bg-neutral-300/10 p-1 rounded-xl border border-neutral-300/10">
           <button
             onClick={() => gm.setActiveTab("control")}
             className={`flex items-center gap-2 px-2 py-1 rounded-lg text-sm font-bold transition-all ${
@@ -64,7 +64,7 @@ const UIGameMaster: React.FC = () => {
                 : "text-neutral-500 hover:text-neutral-300"
             }`}
           >
-            <Users size={16} /> <span className="hidden md:inline">Patio</span>
+            <Users size={24} /> <span className="hidden md:inline">Patio</span>
           </button>
           <button
             onClick={() => gm.setActiveTab("narrative")}
@@ -74,7 +74,7 @@ const UIGameMaster: React.FC = () => {
                 : "text-neutral-500 hover:text-neutral-300"
             }`}
           >
-            <BookOpen size={16} />{" "}
+            <BookOpen size={24} />{" "}
             <span className="hidden md:inline">Narrativa</span>
           </button>
           <button
@@ -85,7 +85,7 @@ const UIGameMaster: React.FC = () => {
                 : "text-neutral-500 hover:text-neutral-300"
             }`}
           >
-            <Zap size={16} /> <span className="hidden md:inline">Acciones</span>
+            <Zap size={24} /> <span className="hidden md:inline">Acciones</span>
           </button>
         </div>
 
