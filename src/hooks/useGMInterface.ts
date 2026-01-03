@@ -12,6 +12,8 @@ export const useGMInterface = () => {
   const clockConfig = useStore((state) => state.room.clockConfig);
   const tickerSpeed = useStore((state) => state.room.tickerSpeed);
   const status = useStore((state) => state.room.status);
+  const gameStatus = useStore((state) => state.room.gameStatus);
+  const gamePhase = useStore((state) => state.room.gamePhase);
   const players = useStore((state) => state.room.players);
   const votes = useStore((state) => state.room.votes);
   const globalStates = useStore((state) => state.room.globalStates);
@@ -36,6 +38,15 @@ export const useGMInterface = () => {
   const setGM = useStore((state) => state.setGM);
   const gmSendDivineVoice = useStore((state) => state.gmSendDivineVoice);
   const gmSendGlobalMessage = useStore((state) => state.gmSendGlobalMessage);
+
+  // Game Engine actions
+  const prepareGame = useStore((state) => state.prepareGame);
+  const setGamePhase = useStore((state) => state.setGamePhase);
+  const stopGame = useStore((state) => state.stopGame);
+
+  // Shutdown & Refresh actions
+  const gmShutdown = useStore((state) => state.gmShutdown);
+  const gmForceRefreshAll = useStore((state) => state.gmForceRefreshAll);
 
   // Local state
   const [localTicker, setLocalTicker] = useState(tickerText);
@@ -172,7 +183,7 @@ export const useGMInterface = () => {
   };
 
   const handleShutdown = async () => {
-    await gmResetRoom();
+    await gmShutdown();
     setShowShutdownConfirm(false);
   };
 
@@ -185,7 +196,7 @@ export const useGMInterface = () => {
   };
 
   const handleSoftReset = async () => {
-    await gmEndGame();
+    await gmForceRefreshAll();
     setShowResetConfirm(false);
   };
 
@@ -206,6 +217,8 @@ export const useGMInterface = () => {
     clockConfig,
     tickerSpeed,
     status,
+    gameStatus,
+    gamePhase,
     players,
     votes,
     globalStates,
@@ -277,6 +290,15 @@ export const useGMInterface = () => {
     handleSoftReset,
     handleKickPlayer,
     gmRemovePlayer,
+
+    // Game Engine Actions
+    prepareGame,
+    setGamePhase,
+    stopGame,
+
+    // Shutdown & Refresh Actions
+    gmShutdown,
+    gmForceRefreshAll,
 
     // Misc
     gmToast,

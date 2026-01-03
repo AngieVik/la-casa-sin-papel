@@ -1,5 +1,5 @@
 import { StateCreator } from "zustand";
-import { AppStore } from "../types";
+import { AppStore, GameModule } from "../types";
 import { db } from "../firebaseConfig";
 import {
   ref,
@@ -8,7 +8,13 @@ import {
   remove,
   set as firebaseSet,
 } from "firebase/database";
-import { DEFAULT_CLOCK_CONFIG } from "./createGameSlice";
+import {
+  DEFAULT_CLOCK_CONFIG,
+  DEFAULT_ROLES,
+  DEFAULT_PLAYER_STATES,
+  DEFAULT_PUBLIC_STATES,
+  DEFAULT_GLOBAL_STATES,
+} from "./createGameSlice";
 
 const ROOM_REF = "rooms/defaultRoom";
 
@@ -62,6 +68,11 @@ export const createGMSlice: StateCreator<
     | "gmRemovePlayerFromRoom"
     | "gmCloseChatRoom"
     | "gmTurnOffSession"
+    | "prepareGame"
+    | "setGamePhase"
+    | "stopGame"
+    | "gmShutdown"
+    | "gmForceRefreshAll"
   >
 > = (set, get) => ({
   gmUpdateTicker: (text) => {
@@ -582,5 +593,151 @@ export const createGMSlice: StateCreator<
     // Also remove the channel messages
     const channelRef = ref(db, `${ROOM_REF}/channels/room_${roomId}`);
     await remove(channelRef);
+  },
+
+  // ============ GAME ENGINE ACTIONS ============
+
+  prepareGame: async (gameModule: GameModule) => {
+    const { room } = get();
+
+    // Merge específicos del juego con los actuales
+    const mergedRoles = [
+      ...new Set([...room.roles, ...gameModule.specificData.roles]),
+    ];
+    const mergedPlayerStates = [
+      ...new Set([
+        ...room.playerStates,
+        ...gameModule.specificData.playerStates,
+      ]),
+    ];
+    const mergedPublicStates = [
+      ...new Set([
+        ...room.publicStates,
+        ...gameModule.specificData.publicStates,
+      ]),
+    ];
+    const mergedGlobalStates = [
+      ...new Set([
+        ...room.globalStates,
+        ...gameModule.specificData.globalStates,
+      ]),
+    ];
+
+    // Actualizar Firebase con el nuevo estado
+    await update(ref(db, ROOM_REF), {
+      status: "playing",
+      gameStatus: "setup",
+      gameSelected: gameModule.id,
+      gamePhase: 0,
+      roles: mergedRoles,
+      playerStates: mergedPlayerStates,
+      publicStates: mergedPublicStates,
+      globalStates: mergedGlobalStates,
+      // Guardar los defaults actuales para poder restaurar
+      defaultRoles: room.defaultRoles || DEFAULT_ROLES,
+      defaultPlayerStates: room.defaultPlayerStates || DEFAULT_PLAYER_STATES,
+      defaultPublicStates: room.defaultPublicStates || DEFAULT_PUBLIC_STATES,
+      defaultGlobalStates: room.defaultGlobalStates || DEFAULT_GLOBAL_STATES,
+    });
+  },
+
+  setGamePhase: async (phase: number) => {
+    const updates: Record<string, unknown> = { gamePhase: phase };
+
+    // Si avanzamos a fase 1+, el gameStatus pasa a "playing"
+    if (phase >= 1) {
+      updates.gameStatus = "playing";
+    } else {
+      updates.gameStatus = "setup";
+    }
+
+    await update(ref(db, ROOM_REF), updates);
+  },
+
+  stopGame: async () => {
+    const { room } = get();
+
+    // Obtener los roles/estados del juego que se cerrará
+    const gameRoles = room.roles.filter((r) => !room.defaultRoles.includes(r));
+    const gamePlayerStates = room.playerStates.filter(
+      (s) => !room.defaultPlayerStates.includes(s)
+    );
+    const gamePublicStates = room.publicStates.filter(
+      (s) => !room.defaultPublicStates.includes(s)
+    );
+
+    const updates: Record<string, unknown> = {
+      status: "waiting",
+      gameStatus: "lobby",
+      gameSelected: null,
+      gamePhase: 0,
+      // Restaurar a valores por defecto
+      roles: room.defaultRoles,
+      playerStates: room.defaultPlayerStates,
+      publicStates: room.defaultPublicStates,
+      globalStates: room.defaultGlobalStates,
+    };
+
+    // Sanitización de jugadores: eliminar roles/estados del juego cerrado
+    room.players.forEach((player) => {
+      const currentRoles = player.roles || [];
+      const currentPlayerStates = player.playerStates || [];
+      const currentPublicStates = player.publicStates || [];
+
+      // Filtrar roles del juego
+      const cleanedRoles = currentRoles.filter((r) => !gameRoles.includes(r));
+      // Filtrar estados del juego
+      const cleanedPlayerStates = currentPlayerStates.filter(
+        (s) => !gamePlayerStates.includes(s)
+      );
+      const cleanedPublicStates = currentPublicStates.filter(
+        (s) => !gamePublicStates.includes(s)
+      );
+
+      updates[`players/${player.id}/roles`] =
+        cleanedRoles.length > 0 ? cleanedRoles : null;
+      updates[`players/${player.id}/playerStates`] =
+        cleanedPlayerStates.length > 0 ? cleanedPlayerStates : null;
+      updates[`players/${player.id}/publicStates`] =
+        cleanedPublicStates.length > 0 ? cleanedPublicStates : null;
+      updates[`players/${player.id}/ready`] = false;
+    });
+
+    await update(ref(db, ROOM_REF), updates);
+  },
+
+  // ============ SHUTDOWN & REFRESH ACTIONS ============
+
+  gmShutdown: async () => {
+    // Apagado total: limpia todo y expulsa a todos
+    await update(ref(db, ROOM_REF), {
+      status: "shutdown",
+      players: null,
+      votes: null,
+      channels: { global: null },
+      chatRooms: null,
+      notifications: null,
+      gameSelected: null,
+      gameStatus: "lobby",
+      gamePhase: 0,
+      roles: DEFAULT_ROLES,
+      playerStates: DEFAULT_PLAYER_STATES,
+      publicStates: DEFAULT_PUBLIC_STATES,
+      globalStates: DEFAULT_GLOBAL_STATES,
+      defaultRoles: DEFAULT_ROLES,
+      defaultPlayerStates: DEFAULT_PLAYER_STATES,
+      defaultPublicStates: DEFAULT_PUBLIC_STATES,
+      defaultGlobalStates: DEFAULT_GLOBAL_STATES,
+      ticker: "Sistema apagado.",
+      globalState: "Día",
+      forceRefreshTimestamp: null,
+    });
+  },
+
+  gmForceRefreshAll: async () => {
+    // Forzar resincronización de todos los clientes
+    await update(ref(db, ROOM_REF), {
+      forceRefreshTimestamp: Date.now(),
+    });
   },
 });

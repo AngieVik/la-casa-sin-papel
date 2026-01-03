@@ -1,7 +1,30 @@
+import React from "react";
+
 export type ViewName = "login" | "patio" | "gm" | "player";
-export type RoomStatus = "waiting" | "playing";
+export type RoomStatus = "waiting" | "playing" | "shutdown";
 export type ClockMode = "static" | "countdown" | "stopwatch";
 export type ChatChannelType = "global" | "private" | "room";
+export type GameStatus = "lobby" | "setup" | "playing";
+
+// ============ GAME ENGINE TYPES ============
+
+export interface GameSpecificData {
+  roles: string[]; // Ej: ["Bala", "Vacio"]
+  playerStates: string[]; // Ej: ["Envenenado"]
+  publicStates: string[]; // Ej: ["Marcado"]
+  globalStates: string[]; // Ej: ["Niebla"]
+}
+
+export interface GameModule {
+  id: string;
+  title: string;
+  description: string;
+  minRoles: string[]; // Roles mínimos requeridos para Fase 0
+  specificData: GameSpecificData; // Datos que se suman a los defaults
+  Component: React.ComponentType; // La pantalla de juego (Fase 1+)
+}
+
+// ============================================
 
 export interface ClockConfig {
   mode: ClockMode;
@@ -60,6 +83,8 @@ export interface ChatMessage {
 export interface RoomState {
   status: RoomStatus;
   gameSelected: string | null;
+  gameStatus: GameStatus; // Estado del juego: lobby, setup, playing
+  gamePhase: number; // Fase actual del juego (0 = setup, 1+ = juego)
   players: Player[];
   messages: ChatMessage[];
   votes: Record<string, Record<string, boolean>>;
@@ -73,11 +98,18 @@ export interface RoomState {
   playerStates: string[]; // Estados personales (Envenenado, etc.)
   publicStates: string[]; // Estados públicos (Vivo, Muerto, etc.)
   roles: string[]; // Roles disponibles para asignar a jugadores
+  // Valores por defecto (para restaurar al cerrar juego)
+  defaultRoles: string[];
+  defaultPlayerStates: string[];
+  defaultPublicStates: string[];
+  defaultGlobalStates: string[];
   // Chat rooms y notificaciones
   chatRooms: ChatRoom[];
   notifications: PlayerNotification[];
   // Typing indicators: { channelName: { oderId: timestamp } }
   typing: Record<string, Record<string, number>>;
+  // Force refresh timestamp for sync
+  forceRefreshTimestamp?: number;
 }
 
 export interface UIState {
@@ -151,6 +183,15 @@ export interface AppStore {
   gmAddRole: (role: string) => void;
   gmEditRole: (oldRole: string, newRole: string) => void;
   gmDeleteRole: (role: string) => void;
+
+  // Game Engine Actions
+  prepareGame: (gameModule: GameModule) => Promise<void>;
+  setGamePhase: (phase: number) => Promise<void>;
+  stopGame: () => Promise<void>;
+
+  // Shutdown & Refresh Actions
+  gmShutdown: () => Promise<void>;
+  gmForceRefreshAll: () => Promise<void>;
 
   // Notification Actions
   gmSendGlobalMessage: (text: string) => Promise<void>;

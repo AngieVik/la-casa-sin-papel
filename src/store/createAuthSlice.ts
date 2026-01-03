@@ -52,7 +52,49 @@ export const createAuthSlice: StateCreator<
   setGM: (isGM) => set((state) => ({ user: { ...state.user, isGM } })),
 
   restoreAuthSession: async () => {
-    // Force sign out to ensure clean session on reload
+    // Check if there's a saved session in sessionStorage (F5 recovery)
+    const savedId = sessionStorage.getItem("userId");
+    const savedNickname = sessionStorage.getItem("nickname");
+    const savedIsGM = sessionStorage.getItem("isGM") === "true";
+
+    if (savedId && savedNickname) {
+      // Verify if user still exists in Firebase
+      try {
+        const playerRef = ref(db, `${ROOM_REF}/players/${savedId}`);
+        const snapshot = await firebaseGet(playerRef);
+
+        if (snapshot.exists()) {
+          // Reconnect with existing session
+          await signInAnonymously(auth);
+
+          // Update status to online in Firebase
+          await update(playerRef, {
+            status: "online",
+            lastSeen: Date.now(),
+          });
+
+          set({
+            user: { nickname: savedNickname, isGM: savedIsGM, id: savedId },
+            ui: {
+              isChatOpen: false,
+              isSync: false,
+              currentView: savedIsGM ? "gm" : "patio",
+              isLoading: false,
+              error: null,
+              activeChannel: "global",
+            },
+          });
+          return; // Session restored successfully
+        }
+      } catch (e) {
+        console.error("Error restoring session:", e);
+      }
+
+      // User doesn't exist anymore - clear session
+      sessionStorage.clear();
+    }
+
+    // No valid session - force login
     try {
       await signOut(auth);
     } catch (e) {
@@ -106,6 +148,11 @@ export const createAuthSlice: StateCreator<
     try {
       const userCredential = await signInAnonymously(auth);
       const uid = userCredential.user.uid;
+
+      // Save session to sessionStorage (survives F5, not tab close)
+      sessionStorage.setItem("userId", uid);
+      sessionStorage.setItem("nickname", nickname);
+      sessionStorage.setItem("isGM", String(isGM));
 
       set({
         user: { nickname, isGM, id: uid },

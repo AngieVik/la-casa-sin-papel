@@ -192,7 +192,7 @@ const UIPlayer: React.FC = () => {
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top fade-in duration-300">
           <div className="px-6 py-3 bg-gradient-to-r from-pink-900/90 to-purple-900/90 border border-pink-500/50 rounded-full shadow-2xl shadow-pink-500/30 flex items-center gap-3">
             <span className="text-3xl">{soundToast.emoji}</span>
-            <span className="text-white font-bold uppercase tracking-wider">
+            <span className="text-white font-bold tracking-wider">
               {soundToast.name}
             </span>
           </div>
@@ -215,7 +215,7 @@ const UIPlayer: React.FC = () => {
           {showHistory && (
             <div className="absolute bottom-14 right-0 w-72 max-h-64 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
               <div className="p-3 border-b border-neutral-800 flex items-center justify-between">
-                <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+                <span className="text-xs font-bold text-neutral-400 tracking-wider flex items-center gap-2">
                   <History size={14} /> Historial
                 </span>
                 <button
@@ -270,7 +270,7 @@ const UIPlayer: React.FC = () => {
               <div className="inline-flex items-center justify-center p-4 bg-indigo-500/20 rounded-full mb-4 border border-indigo-500/50">
                 <Volume2 size={32} className="text-indigo-400" />
               </div>
-              <h3 className="text-lg font-bold text-indigo-400 uppercase tracking-wider mb-3">
+              <h3 className="text-lg font-bold text-indigo-400 tracking-wider mb-3">
                 Voz Divina
               </h3>
               <p className="text-xl text-white font-medium leading-relaxed">
@@ -283,11 +283,13 @@ const UIPlayer: React.FC = () => {
 
       {/* Selected Game Section */}
       {selectedGameData && (
-        <section className="bg-green-600/20 border border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)] p-4 rounded-xl mb-6">
-          <h2 className="text-green-400 font-bold uppercase tracking-wider mb-1">
+        <section className="bg-green-600/20 border border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)] p-2 rounded-xl">
+          <h2 className="text-green-400 font-bold tracking-wider">
             {selectedGameData.title}
           </h2>
-          <p className="text-neutral-400 text-xs">{selectedGameData.desc}</p>
+          <p className="text-neutral-400 text-xs">
+            {selectedGameData.description}
+          </p>
         </section>
       )}
 
@@ -303,7 +305,7 @@ const UIPlayer: React.FC = () => {
             <div className="inline-flex items-center justify-center p-3 bg-neutral-800 rounded-full mb-3 border border-neutral-700">
               <Moon size={24} className="text-indigo-400" />
             </div>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tight">
+            <h2 className="text-2xl font-black text-white tracking-tight">
               {globalState || "Esperando..."}
             </h2>
           </div>
@@ -311,14 +313,14 @@ const UIPlayer: React.FC = () => {
           {/* My Role Section */}
           <div className="p-6 bg-gradient-to-b from-neutral-900 to-neutral-900/80">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+              <span className="hidden text-xs font-bold text-neutral-500 tracking-wider">
                 Tu Identidad
               </span>
-              <Fingerprint size={16} className="text-green-500" />
+              <Fingerprint size={30} className="text-green-500" />
             </div>
 
             <div className="mb-4">
-              <h1 className="text-3xl font-black text-green-500 uppercase tracking-tighter">
+              <h1 className="text-3xl font-black text-green-500  tracking-tighter">
                 {nickname}
               </h1>
               <div className="flex flex-wrap gap-1 mt-1">
@@ -326,13 +328,13 @@ const UIPlayer: React.FC = () => {
                   myRoles.map((role) => (
                     <span
                       key={role}
-                      className="text-xs bg-green-900/20 text-green-400 px-2 py-1 rounded border border-green-900/50 uppercase font-bold tracking-wide"
+                      className="text-xs bg-green-900/20 text-green-400 px-2 py-1 rounded border border-green-900/50  font-bold tracking-wide"
                     >
                       {role}
                     </span>
                   ))
                 ) : (
-                  <span className="text-xs bg-neutral-800 text-neutral-500 px-2 py-1 rounded border border-neutral-700 uppercase font-bold tracking-wide">
+                  <span className="text-xs bg-neutral-800 text-neutral-500 px-2 py-1 rounded border border-neutral-700  font-bold tracking-wide">
                     Sin Rol
                   </span>
                 )}
@@ -342,7 +344,7 @@ const UIPlayer: React.FC = () => {
             {/* My States */}
             {myPlayerStates.length > 0 && (
               <div className="mt-4">
-                <p className="text-xs text-neutral-500 uppercase mb-2 flex items-center gap-1">
+                <p className="text-xs text-neutral-500 mb-2 flex items-center gap-1">
                   <MessageCircle size={12} /> Estados Privados
                 </p>
                 <div className="flex flex-wrap gap-1">
@@ -360,7 +362,7 @@ const UIPlayer: React.FC = () => {
 
             {myPublicStates.length > 0 && (
               <div className="mt-3">
-                <p className="text-xs text-neutral-500 uppercase mb-2 flex items-center gap-1">
+                <p className="text-xs text-neutral-500 mb-2 flex items-center gap-1">
                   <Eye size={12} /> Estados Públicos
                 </p>
                 <div className="flex flex-wrap gap-1">
@@ -381,8 +383,8 @@ const UIPlayer: React.FC = () => {
 
       {/* 2. Other Players List */}
       <section>
-        <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4 px-1 flex items-center gap-2">
-          <Eye size={14} /> Estado Público de Agentes
+        <h3 className="text-xs font-bold text-neutral-500 tracking-wider mb-2 px-1 flex items-center gap-2">
+          <Eye size={14} /> Jugadores
         </h3>
 
         <div className="grid gap-2">
@@ -431,16 +433,16 @@ const UIPlayer: React.FC = () => {
                 <div className="flex items-center gap-2">
                   {/* Status indicators */}
                   {playerPublicStates.length > 0 ? (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-wrap justify-end">
                       {playerPublicStates.map((state) => (
                         <span
                           key={state}
-                          className={`text-xs font-mono px-2 py-0.5 rounded ${
+                          className={`text-xs px-2 py-1 rounded border ${
                             state === "Muerto"
-                              ? "bg-neutral-800 text-neutral-500"
+                              ? "bg-neutral-800 text-neutral-500 border-neutral-700"
                               : state === "Herido"
-                              ? "bg-yellow-900/30 text-yellow-400"
-                              : "bg-green-900/30 text-green-400"
+                              ? "bg-yellow-900/30 text-yellow-400 border-yellow-900/50"
+                              : "bg-blue-900/30 text-blue-400 border-blue-900/50"
                           }`}
                         >
                           {state}
@@ -450,7 +452,7 @@ const UIPlayer: React.FC = () => {
                   ) : (
                     <>
                       <span className="flex h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"></span>
-                      <span className="text-xs font-mono text-neutral-500 uppercase">
+                      <span className="text-xs font-mono text-neutral-500">
                         Activo
                       </span>
                     </>

@@ -15,9 +15,11 @@ import ModalWrapper from "./ModalWrapper";
 import GMControlTab from "./gm/GMControlTab";
 import GMNarrativeTab from "./gm/GMNarrativeTab";
 import GMActionsTab from "./gm/GMActionsTab";
+import GameContainer from "./gm/GameContainer";
 import PlayerEditModal from "./gm/PlayerEditModal";
 import StateManagementModals from "./gm/StateManagementModals";
 import { useGMInterface } from "../hooks/useGMInterface";
+import { getGameById } from "../constants/games";
 
 const UIGameMaster: React.FC = () => {
   const gm = useGMInterface();
@@ -62,8 +64,7 @@ const UIGameMaster: React.FC = () => {
                 : "text-neutral-500 hover:text-neutral-300"
             }`}
           >
-            <Users size={16} />{" "}
-            <span className="hidden md:inline">Jugadores</span>
+            <Users size={16} /> <span className="hidden md:inline">Patio</span>
           </button>
           <button
             onClick={() => gm.setActiveTab("narrative")}
@@ -89,19 +90,57 @@ const UIGameMaster: React.FC = () => {
         </div>
 
         <div className="flex gap-2">
-          {gm.status === "waiting" ? (
-            <button
-              onClick={() => gm.setShowStartGameConfirm(true)}
-              className="bg-red-600 hover:bg-red-500 text-white font-bold px-2 py-1 rounded-xl flex items-center gap-2 transition-all transform active:scale-95 shadow-[0_0_15px_rgba(34,197,94,0.3)]"
-            >
-              <Play size={20} fill="currentColor" />
-            </button>
+          {gm.gameStatus === "lobby" ? (
+            (() => {
+              const nonGMPlayers = gm.players.filter((p) => !p.isGM);
+              const allReady =
+                nonGMPlayers.length > 0 && nonGMPlayers.every((p) => p.ready);
+              const isRegisteredGame =
+                gm.gameSelected && getGameById(gm.gameSelected);
+
+              return (
+                <button
+                  onClick={() => {
+                    if (isRegisteredGame) {
+                      // Game Engine: call prepareGame directly
+                      gm.prepareGame(getGameById(gm.gameSelected!)!);
+                    } else {
+                      // Legacy: show confirm modal
+                      gm.setShowStartGameConfirm(true);
+                    }
+                  }}
+                  disabled={!allReady || !gm.gameSelected}
+                  className={`font-bold px-2 py-1 rounded-xl flex items-center gap-2 transition-all transform active:scale-95 ${
+                    allReady && gm.gameSelected
+                      ? "bg-green-600 hover:bg-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+                      : "bg-neutral-700 text-neutral-500 cursor-not-allowed"
+                  }`}
+                  title={
+                    !allReady
+                      ? "Todos los jugadores deben estar listos"
+                      : !gm.gameSelected
+                      ? "Selecciona un juego"
+                      : "Iniciar juego"
+                  }
+                >
+                  <Play size={20} fill="currentColor" />
+                </button>
+              );
+            })()
           ) : (
             <button
-              onClick={() => gm.gmEndGame()}
+              onClick={() => {
+                const isRegisteredGame =
+                  gm.gameSelected && getGameById(gm.gameSelected);
+                if (isRegisteredGame) {
+                  gm.stopGame();
+                } else {
+                  gm.gmEndGame();
+                }
+              }}
               className="bg-red-600 hover:bg-red-500 text-white font-bold px-2 py-1 rounded-xl flex items-center gap-2 transition-all transform active:scale-95 shadow-[0_0_15px_rgba(220,38,38,0.3)]"
             >
-              <Square size={20} fill="currentColor" /> DETENER
+              <Square size={20} fill="currentColor" />
             </button>
           )}
 
@@ -131,6 +170,7 @@ const UIGameMaster: React.FC = () => {
             players={gm.players}
             votes={gm.votes}
             gameSelected={gm.gameSelected}
+            gameStatus={gm.gameStatus}
             onSelectGame={gm.gmSelectGame}
             onEditPlayer={gm.openPlayerEdit}
             onOpenAudit={() => gm.setShowAuditModal(true)}

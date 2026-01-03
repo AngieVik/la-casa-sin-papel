@@ -1,19 +1,29 @@
-export const GAMES = [
-  {
-    id: "juego1",
-    title: "Atraco al Banco",
-    desc: "Gestión de recursos y tiempo.",
-  },
-  { id: "juego2", title: "El Topo", desc: "Roles ocultos y deducción." },
-  { id: "juego3", title: "Protocolo Fantasma", desc: "Hackeo y sigilo." },
-  {
-    id: "juego4",
-    title: "Motín en la Prisión",
-    desc: "Acción y control de áreas.",
-  },
-  { id: "juego5", title: "La Fuga", desc: "Cooperativo contra reloj." },
-  { id: "juego6", title: "Negociación", desc: "Social y bluffing." },
-] as const;
+import { GameModule } from "../types";
+import TestGame from "../games/TestGame";
 
-export type GameId = (typeof GAMES)[number]["id"];
-export type Game = (typeof GAMES)[number];
+/**
+ * GAMES - Registro de juegos disponibles
+ * Cada juego es un módulo del Game Engine
+ */
+export const GAMES: GameModule[] = [
+  {
+    id: "test_game",
+    title: "Juego de Prueba",
+    description: "Un juego simple para testear el motor de juegos.",
+    minRoles: ["Dado", "Moneda"],
+    specificData: {
+      roles: ["Dado", "Moneda"],
+      playerStates: ["Afortunado"],
+      publicStates: ["Ganador"],
+      globalStates: ["Ronda Activa"],
+    },
+    Component: TestGame,
+  },
+];
+
+/**
+ * Obtiene un juego por su ID
+ */
+export const getGameById = (id: string): GameModule | undefined => {
+  return GAMES.find((g) => g.id === id);
+};

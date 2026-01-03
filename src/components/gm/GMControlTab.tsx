@@ -7,13 +7,15 @@ import {
   BookOpen,
   ShieldAlert,
 } from "lucide-react";
-import { Player } from "../../types";
-import { GAMES } from "../../constants/games";
+import { Player, GameStatus } from "../../types";
+import { GAMES, getGameById } from "../../constants/games";
+import GameContainer from "./GameContainer";
 
 interface GMControlTabProps {
   players: Player[];
   votes: Record<string, Record<string, boolean>>;
   gameSelected: string | null;
+  gameStatus: GameStatus;
   onSelectGame: (gameId: string | null) => void;
   onEditPlayer: (playerId: string) => void;
   onOpenAudit: () => void;
@@ -23,69 +25,86 @@ const GMControlTab: React.FC<GMControlTabProps> = ({
   players,
   votes,
   gameSelected,
+  gameStatus,
   onSelectGame,
   onEditPlayer,
   onOpenAudit,
 }) => {
   const nonGMPlayers = players.filter((p) => !p.isGM);
 
+  // Map games (all are engine games now)
+  const allGames = GAMES.map((g) => ({
+    id: g.id,
+    title: g.title,
+    desc: g.description,
+  }));
+
   return (
     <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-      {/* Game Selector Section */}
-      <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl">
-        <h4 className="text-neutral-300 font-bold mb-2 flex items-center gap-2">
-          <BookOpen size={16} /> Selector de Juego
-        </h4>
-        <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-1">
-          {GAMES.map((game) => {
-            const gameVotes = votes[game.id]
-              ? Object.keys(votes[game.id]).length
-              : 0;
-            const isSelected = gameSelected === game.id;
-            return (
-              <button
-                key={game.id}
-                onClick={() => onSelectGame(isSelected ? null : game.id)}
-                className={`p-4 rounded-lg border text-left transition-all relative ${
-                  isSelected
-                    ? "bg-green-600/20 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)]"
-                    : "bg-neutral-900 border-neutral-700 hover:border-neutral-500"
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h5
-                      className={`font-bold ${
-                        isSelected ? "text-green-400" : "text-white"
+      {/* Game Selector OR GameContainer */}
+      {gameStatus !== "lobby" && gameSelected && getGameById(gameSelected) ? (
+        // Show GameContainer when game is active
+        <GameContainer />
+      ) : (
+        // Show game selector in lobby
+        <div className="p-4 bg-neutral-950 border border-neutral-800 rounded-xl">
+          <h4 className="text-neutral-300 font-bold mb-2 flex items-center gap-2">
+            <BookOpen size={16} /> Selector de Juego
+          </h4>
+          <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-1">
+            {allGames.map((game) => {
+              const gameVotes = votes[game.id]
+                ? Object.keys(votes[game.id]).length
+                : 0;
+              const isSelected = gameSelected === game.id;
+              return (
+                <button
+                  key={game.id}
+                  onClick={() => onSelectGame(isSelected ? null : game.id)}
+                  className={`p-4 rounded-lg border text-left transition-all relative ${
+                    isSelected
+                      ? "bg-green-600/20 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)]"
+                      : "bg-indigo-900/20 border-indigo-700 hover:border-indigo-500"
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h5
+                        className={`font-bold ${
+                          isSelected ? "text-green-400" : "text-indigo-300"
+                        }`}
+                      >
+                        {game.title}
+                        <span className="ml-1 text-[8px] bg-indigo-600 text-white px-1 rounded">
+                          ENGINE
+                        </span>
+                      </h5>
+                      <p className="text-xs text-neutral-500">{game.desc}</p>
+                    </div>
+                    <div
+                      className={`flex items-center gap-1 p-1 rounded-full text-xs font-bold ${
+                        gameVotes > 0
+                          ? "bg-red-600 text-white"
+                          : "bg-neutral-800 text-neutral-500"
                       }`}
                     >
-                      {game.title}
-                    </h5>
-                    <p className="text-xs text-neutral-500">{game.desc}</p>
+                      {gameVotes}
+                    </div>
                   </div>
-                  <div
-                    className={`flex items-center gap-1 p-1 rounded-full text-xs font-bold ${
-                      gameVotes > 0
-                        ? "bg-red-600 text-white"
-                        : "bg-neutral-800 text-neutral-500"
-                    }`}
-                  >
-                    {gameVotes}
-                  </div>
-                </div>
-                {isSelected && (
-                  <div className="absolute top-1 right-1">
-                    <CheckCircle2
-                      size={16}
-                      className="text-green-400 animate-pulse"
-                    />
-                  </div>
-                )}
-              </button>
-            );
-          })}
+                  {isSelected && (
+                    <div className="absolute top-1 right-1">
+                      <CheckCircle2
+                        size={16}
+                        className="text-green-400 animate-pulse"
+                      />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Players Section */}
       <div className="flex justify-between items-center w-full">
@@ -141,7 +160,9 @@ const GMControlTab: React.FC<GMControlTabProps> = ({
 
                 {/* Rol del Jugador */}
                 <div className="text-xs text-neutral-500 font-mono uppercase tracking-widest whitespace-nowrap overflow-hidden text-ellipsis">
-                  {player.role || "Sin Rol"}
+                  {(player.roles || []).length > 0
+                    ? (player.roles || []).join(", ")
+                    : "Sin Rol"}
                 </div>
 
                 {/* Estados Públicos (Azules) */}
