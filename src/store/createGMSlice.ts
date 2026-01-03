@@ -433,7 +433,7 @@ export const createGMSlice: StateCreator<
     const { room } = get();
     const newRoles = room.roles.map((r) => (r === oldRole ? newRole : r));
     update(ref(db, ROOM_REF), { roles: newRoles });
-    
+
     // Actualizar también a los jugadores que tengan este rol
     room.players.forEach((player) => {
       if (player.roles?.includes(oldRole)) {
@@ -451,7 +451,7 @@ export const createGMSlice: StateCreator<
     const { room } = get();
     const newRoles = room.roles.filter((r) => r !== role);
     update(ref(db, ROOM_REF), { roles: newRoles });
-    
+
     // Quitar el rol a los jugadores que lo tengan
     room.players.forEach((player) => {
       if (player.roles?.includes(role)) {
@@ -555,13 +555,25 @@ export const createGMSlice: StateCreator<
 
   prepareGame: async (gameModule: GameModule) => {
     const { room } = get();
-    
+
     // IMPORTANTE: Si ya hay un juego corriendo, se debería limpiar primero para evitar corrupción de roles.
     // Usamos los defaults almacenados o las constantes como base.
-    const baseRoles = room.gameStatus === 'lobby' ? room.roles : (room.defaultRoles || DEFAULT_ROLES);
-    const basePlayerStates = room.gameStatus === 'lobby' ? room.playerStates : (room.defaultPlayerStates || DEFAULT_PLAYER_STATES);
-    const basePublicStates = room.gameStatus === 'lobby' ? room.publicStates : (room.defaultPublicStates || DEFAULT_PUBLIC_STATES);
-    const baseGlobalStates = room.gameStatus === 'lobby' ? room.globalStates : (room.defaultGlobalStates || DEFAULT_GLOBAL_STATES);
+    const baseRoles =
+      room.gameStatus === "lobby"
+        ? room.roles
+        : room.defaultRoles || DEFAULT_ROLES;
+    const basePlayerStates =
+      room.gameStatus === "lobby"
+        ? room.playerStates
+        : room.defaultPlayerStates || DEFAULT_PLAYER_STATES;
+    const basePublicStates =
+      room.gameStatus === "lobby"
+        ? room.publicStates
+        : room.defaultPublicStates || DEFAULT_PUBLIC_STATES;
+    const baseGlobalStates =
+      room.gameStatus === "lobby"
+        ? room.globalStates
+        : room.defaultGlobalStates || DEFAULT_GLOBAL_STATES;
 
     // Merge específicos del juego
     const mergedRoles = [
