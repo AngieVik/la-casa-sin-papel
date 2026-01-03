@@ -1,5 +1,12 @@
 import React from "react";
-import { Users, CheckCircle2, Clock, Edit2, BookOpen } from "lucide-react";
+import {
+  Users,
+  CheckCircle2,
+  Clock,
+  Edit2,
+  BookOpen,
+  ShieldAlert,
+} from "lucide-react";
 import { Player } from "../../types";
 import { GAMES } from "../../constants/games";
 
@@ -9,6 +16,7 @@ interface GMControlTabProps {
   gameSelected: string | null;
   onSelectGame: (gameId: string | null) => void;
   onEditPlayer: (playerId: string) => void;
+  onOpenAudit: () => void;
 }
 
 const GMControlTab: React.FC<GMControlTabProps> = ({
@@ -17,6 +25,7 @@ const GMControlTab: React.FC<GMControlTabProps> = ({
   gameSelected,
   onSelectGame,
   onEditPlayer,
+  onOpenAudit,
 }) => {
   const nonGMPlayers = players.filter((p) => !p.isGM);
 
@@ -79,68 +88,93 @@ const GMControlTab: React.FC<GMControlTabProps> = ({
       </div>
 
       {/* Players Section */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center w-full">
         <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider">
           Jugadores ({nonGMPlayers.length})
         </h3>
+        <button
+          onClick={onOpenAudit}
+          className="text-[10px] bg-neutral-800 hover:bg-neutral-700 text-neutral-400 px-2 py-1 rounded border border-neutral-700 transition-colors flex items-center gap-1"
+        >
+          <ShieldAlert size={16} /> Auditoría
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      {/* Contenedor Flexbox con wrapping y ajuste de ancho basado en el contenido */}
+      <div className="flex flex-wrap gap-3 w-full justify-start items-stretch">
         {nonGMPlayers.map((player) => (
-          <div
+          <button
             key={player.id}
-            className="bg-neutral-950 border border-neutral-800 p-2 rounded-xl flex items-center justify-between group hover:border-neutral-600 transition-colors"
+            onClick={() => onEditPlayer(player.id)}
+            className="flex-1 min-w-fit max-w-sm bg-neutral-950 border border-neutral-800 p-3 rounded-xl flex items-center justify-between group hover:border-neutral-600 transition-all text-left hover:bg-neutral-900"
           >
             <div className="flex items-center gap-3">
+              {/* Icono de Usuario con indicador de estado */}
               <div
-                className={`p-3 rounded-full ${
+                className={`p-3 rounded-full flex-shrink-0 ${
                   player.ready
-                    ? "bg-green-500/10 text-green-500 border border-green-500/30"
+                    ? "bg-green-500/10 text-green-500 border border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.1)]"
                     : "bg-neutral-800 text-neutral-600 border border-neutral-700"
                 }`}
               >
                 <Users size={18} />
               </div>
-              <div>
+
+              {/* Información del Jugador */}
+              <div className="flex flex-col min-w-0 pr-2">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-white text-lg">
+                  <span className="font-bold text-white text-lg whitespace-nowrap">
                     {player.nickname}
                   </span>
                   {player.ready ? (
-                    <CheckCircle2 size={14} className="text-green-500" />
+                    <CheckCircle2
+                      size={14}
+                      className="text-green-500 flex-shrink-0"
+                    />
                   ) : (
-                    <Clock size={14} className="text-yellow-500/50" />
+                    <Clock
+                      size={14}
+                      className="text-yellow-500/50 flex-shrink-0"
+                    />
                   )}
                 </div>
-                <div className="text-xs text-neutral-500 font-mono uppercase tracking-widest">
+
+                {/* Rol del Jugador */}
+                <div className="text-xs text-neutral-500 font-mono uppercase tracking-widest whitespace-nowrap overflow-hidden text-ellipsis">
                   {player.role || "Sin Rol"}
                 </div>
+
+                {/* Estados Públicos (Azules) */}
                 {(player.publicStates || []).length > 0 && (
                   <div className="text-xs text-blue-400 mt-1 flex flex-wrap gap-1">
                     {(player.publicStates || []).map((state) => (
-                      <span key={state} className="bg-blue-900/30 px-1 rounded">
+                      <span
+                        key={state}
+                        className="bg-blue-900/30 px-1 rounded border border-blue-900/20 whitespace-nowrap"
+                      >
                         {state}
                       </span>
                     ))}
                   </div>
                 )}
-                {/* Private states indicator */}
+
+                {/* Estados Privados (Púrpura) */}
                 {(player.playerStates || []).length > 0 && (
-                  <span className="text-[10px] text-purple-400 font-mono">
-                    🔒 {(player.playerStates || []).length} estado(s) privado(s)
-                  </span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    <span className="text-[10px] text-purple-400 mr-1">🔒</span>
+                    {(player.playerStates || []).map((state) => (
+                      <span
+                        key={state}
+                        className="bg-purple-900/30 text-purple-400 text-[10px] px-1 rounded border border-purple-900/50 whitespace-nowrap"
+                      >
+                        {state}
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
-
-            <button
-              onClick={() => onEditPlayer(player.id)}
-              className="p-2 bg-neutral-800 rounded hover:text-red-400 text-neutral-400 transition-colors"
-              title="Editar Jugador"
-            >
-              <Edit2 size={16} />
-            </button>
-          </div>
+          </button>
         ))}
         {nonGMPlayers.length === 0 && (
           <div className="col-span-full py-12 text-center text-neutral-600 font-mono text-sm border-2 border-dashed border-neutral-800 rounded-2xl">

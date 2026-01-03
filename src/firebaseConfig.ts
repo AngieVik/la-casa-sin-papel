@@ -1,6 +1,10 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getDatabase } from "firebase/database";
-import { getAuth } from "firebase/auth";
+import {
+  getAuth,
+  setPersistence,
+  browserSessionPersistence,
+} from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -20,3 +24,9 @@ if (firebaseConfig.apiKey && getApps().length === 0) {
 
 export const db = app ? getDatabase(app) : (null as any);
 export const auth = app ? getAuth(app) : (null as any);
+
+if (auth) {
+  setPersistence(auth, browserSessionPersistence).catch((error) => {
+    console.error("Error al configurar la persistencia:", error);
+  });
+}

@@ -13,7 +13,7 @@ interface EditingState {
 }
 
 interface AssigningState {
-  type: "player" | "public";
+  type: "player" | "public" | "role";
   value: string;
 }
 
@@ -82,6 +82,7 @@ const StateManagementModals: React.FC<StateManagementModalsProps> = ({
   const gmAddRole = useStore((state) => state.gmAddRole);
   const gmEditRole = useStore((state) => state.gmEditRole);
   const gmDeleteRole = useStore((state) => state.gmDeleteRole);
+  const gmTogglePlayerRole = useStore((state) => state.gmTogglePlayerRole);
 
   const getStateTypeLabel = (type: StateType): string => {
     switch (type) {
@@ -243,7 +244,9 @@ const StateManagementModals: React.FC<StateManagementModalsProps> = ({
               Selecciona un jugador para asignarle este{" "}
               {assigningState.type === "player"
                 ? "estado personal"
-                : "estado público"}
+                : assigningState.type === "public"
+                ? "estado público"
+                : "rol"}
               :
             </p>
             <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
@@ -258,8 +261,13 @@ const StateManagementModals: React.FC<StateManagementModalsProps> = ({
                           player.id,
                           assigningState.value
                         );
-                      } else {
+                      } else if (assigningState.type === "public") {
                         await gmTogglePublicState(
+                          player.id,
+                          assigningState.value
+                        );
+                      } else {
+                        await gmTogglePlayerRole(
                           player.id,
                           assigningState.value
                         );
@@ -283,6 +291,12 @@ const StateManagementModals: React.FC<StateManagementModalsProps> = ({
                         (player.publicStates || []).length > 0 && (
                           <span className="block text-xs text-blue-400">
                             {(player.publicStates || []).join(", ")}
+                          </span>
+                        )}
+                      {assigningState.type === "role" &&
+                        (player.roles || []).length > 0 && (
+                          <span className="block text-xs text-teal-400">
+                            {(player.roles || []).join(", ")}
                           </span>
                         )}
                     </div>

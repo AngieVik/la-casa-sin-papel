@@ -637,7 +637,9 @@ const ChatModal: React.FC = () => {
                   <div className="flex gap-2 text-sm">
                     <span className="text-neutral-500">Rol:</span>
                     <span className="text-green-400">
-                      {player.role || "Player"}
+                      {(player.roles || []).length > 0
+                        ? player.roles?.join(", ")
+                        : "Player"}
                     </span>
                   </div>
                   {(player.playerStates || []).length > 0 && (

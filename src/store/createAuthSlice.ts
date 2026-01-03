@@ -9,7 +9,7 @@ import {
   get as firebaseGet,
   onDisconnect,
 } from "firebase/database";
-import { signInAnonymously, onAuthStateChanged } from "firebase/auth";
+import { signInAnonymously, signOut } from "firebase/auth";
 
 const ROOM_REF = "rooms/defaultRoom";
 
@@ -51,59 +51,27 @@ export const createAuthSlice: StateCreator<
 
   setGM: (isGM) => set((state) => ({ user: { ...state.user, isGM } })),
 
-  restoreAuthSession: () => {
-    return new Promise<void>((resolve) => {
-      set((state) => ({ ui: { ...state.ui, isLoading: true } }));
+  restoreAuthSession: async () => {
+    // Force sign out to ensure clean session on reload
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error("Error signing out during restore:", e);
+    }
 
-      onAuthStateChanged(auth, async (firebaseUser) => {
-        if (firebaseUser) {
-          try {
-            const uid = firebaseUser.uid;
-            const playerRef = ref(db, `${ROOM_REF}/players/${uid}`);
-            const snapshot = await firebaseGet(playerRef);
-
-            if (snapshot.exists()) {
-              const playerData = snapshot.val();
-              await update(playerRef, { status: "online" });
-
-              set({
-                user: {
-                  nickname: playerData.nickname,
-                  isGM: playerData.isGM,
-                  id: uid,
-                },
-                ui: {
-                  isChatOpen: false,
-                  isSync: false,
-                  currentView: playerData.isGM ? "gm" : "patio",
-                  isLoading: false,
-                  error: null,
-                  activeChannel: "global",
-                },
-              });
-
-              if (playerData.isGM) {
-                get().cleanupOldPlayers();
-              }
-            } else {
-              set((state) => ({
-                ui: { ...state.ui, currentView: "login", isLoading: false },
-              }));
-            }
-          } catch (error) {
-            console.error("Error restoring session:", error);
-            set((state) => ({
-              ui: { ...state.ui, currentView: "login", isLoading: false },
-            }));
-          }
-        } else {
-          set((state) => ({
-            ui: { ...state.ui, currentView: "login", isLoading: false },
-          }));
-        }
-        resolve();
-      });
-    });
+    set((state) => ({
+      user: {
+        nickname: "",
+        isGM: false,
+        id: null,
+      },
+      ui: {
+        ...state.ui,
+        currentView: "login",
+        isLoading: false,
+        error: null,
+      },
+    }));
   },
 
   cleanupOldPlayers: async () => {

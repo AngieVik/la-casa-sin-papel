@@ -17,21 +17,21 @@ const variantConfig = {
   danger: {
     icon: AlertTriangle,
     iconColor: "text-red-500",
-    bgColor: "bg-red-900/20",
+    bgColor: "bg-red-900",
     borderColor: "border-red-900/50",
     confirmBg: "bg-red-600 hover:bg-red-700",
   },
   warning: {
     icon: AlertCircle,
     iconColor: "text-yellow-500",
-    bgColor: "bg-yellow-900/20",
+    bgColor: "bg-yellow-900",
     borderColor: "border-yellow-900/50",
     confirmBg: "bg-yellow-600 hover:bg-yellow-700",
   },
   info: {
     icon: Info,
     iconColor: "text-blue-500",
-    bgColor: "bg-blue-900/20",
+    bgColor: "bg-blue-900",
     borderColor: "border-blue-900/50",
     confirmBg: "bg-blue-600 hover:bg-blue-700",
   },
@@ -51,7 +51,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-transparent animate-in fade-in duration-300"
       onClick={onCancel}
     >
       <div

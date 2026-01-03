@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useStore } from "../store";
 import { SOUNDS, getSoundById } from "../constants/sounds";
+import { GAMES } from "../constants/games";
 
 // Notification history item
 interface NotificationHistoryItem {
@@ -31,12 +32,13 @@ const UIPlayer: React.FC = () => {
   const nickname = useStore((state) => state.user.nickname);
   const players = useStore((state) => state.room.players);
   const globalState = useStore((state) => state.room.globalState);
+  const gameSelected = useStore((state) => state.room.gameSelected);
   const notifications = useStore((state) => state.room.notifications);
   const clearNotification = useStore((state) => state.clearNotification);
 
   // Current player data
   const currentPlayer = players.find((p) => p.id === userId);
-  const myRole = currentPlayer?.role || "Player";
+  const myRoles = currentPlayer?.roles || [];
   const myPlayerStates = currentPlayer?.playerStates || [];
   const myPublicStates = currentPlayer?.publicStates || [];
 
@@ -162,6 +164,8 @@ const UIPlayer: React.FC = () => {
     });
   }, [notifications, userId, clearNotification]);
 
+  const selectedGameData = GAMES.find((g) => g.id === gameSelected);
+
   // Get status color class
   const getStatusStyle = (states: string[]) => {
     if (states.includes("Muerto")) return { isDead: true, color: "neutral" };
@@ -277,6 +281,16 @@ const UIPlayer: React.FC = () => {
         </div>
       )}
 
+      {/* Selected Game Section */}
+      {selectedGameData && (
+        <section className="bg-green-600/20 border border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)] p-4 rounded-xl mb-6">
+          <h2 className="text-green-400 font-bold uppercase tracking-wider mb-1">
+            {selectedGameData.title}
+          </h2>
+          <p className="text-neutral-400 text-xs">{selectedGameData.desc}</p>
+        </section>
+      )}
+
       {/* 1. Central Card: Global State & Role */}
       <section className="relative overflow-hidden rounded-2xl border border-neutral-700 bg-neutral-900 shadow-2xl">
         {/* Background Effects */}
@@ -307,9 +321,22 @@ const UIPlayer: React.FC = () => {
               <h1 className="text-3xl font-black text-green-500 uppercase tracking-tighter">
                 {nickname}
               </h1>
-              <span className="text-xs bg-green-900/20 text-green-400 px-2 py-1 rounded border border-green-900/50 uppercase font-bold tracking-wide">
-                {myRole}
-              </span>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {myRoles.length > 0 ? (
+                  myRoles.map((role) => (
+                    <span
+                      key={role}
+                      className="text-xs bg-green-900/20 text-green-400 px-2 py-1 rounded border border-green-900/50 uppercase font-bold tracking-wide"
+                    >
+                      {role}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs bg-neutral-800 text-neutral-500 px-2 py-1 rounded border border-neutral-700 uppercase font-bold tracking-wide">
+                    Sin Rol
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* My States */}

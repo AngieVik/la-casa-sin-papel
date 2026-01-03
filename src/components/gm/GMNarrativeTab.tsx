@@ -77,19 +77,22 @@ const GMNarrativeTab: React.FC<GMNarrativeTabProps> = ({
       </div>
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-1">
         {states.map((state) => (
-          <div key={state} className="relative group">
+          <div
+            key={state}
+            className="relative group block"
+            onClick={() => {
+              if (type === "global") {
+                currentGlobalState === state
+                  ? gmUpdateGlobalState("")
+                  : gmUpdateGlobalState(state);
+              } else if (type === "role") {
+                onAssignState("role", state);
+              } else {
+                onAssignState(type as "player" | "public", state);
+              }
+            }}
+          >
             <button
-              onClick={() => {
-                if (type === "global") {
-                  currentGlobalState === state
-                    ? gmUpdateGlobalState("")
-                    : gmUpdateGlobalState(state);
-                } else if (type === "role") {
-                  // Roles don't have a global selection, just edit/delete
-                } else {
-                  onAssignState(type as "player" | "public", state);
-                }
-              }}
               className={`w-full p-2 rounded-lg border text-xs font-bold transition-all flex items-center justify-between ${
                 type === "global" && currentGlobalState === state
                   ? colorClasses.active ||

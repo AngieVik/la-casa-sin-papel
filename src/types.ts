@@ -3,6 +3,14 @@ export type RoomStatus = "waiting" | "playing";
 export type ClockMode = "static" | "countdown" | "stopwatch";
 export type ChatChannelType = "global" | "private" | "room";
 
+export interface ClockConfig {
+  mode: ClockMode;
+  baseTime: number; // Tiempo acumulado en segundos
+  isRunning: boolean; // Si el reloj está corriendo
+  startTime: number | null; // Timestamp de cuando se inició (null si pausado/estático)
+  pausedAt: number | null; // Timestamp de cuando se pauso (null si no pausado)
+}
+
 export interface UserState {
   nickname: string;
   isGM: boolean;
@@ -15,7 +23,7 @@ export interface Player {
   isGM: boolean;
   ready: boolean;
   status: "online" | "offline";
-  role?: string;
+  roles?: string[]; // Múltiples roles
   playerStates?: string[]; // Estados privados (solo GM ve) - múltiples
   publicStates?: string[]; // Estados visibles para todos - múltiples
   lastSeen?: number; // Timestamp de última actividad
@@ -57,13 +65,7 @@ export interface RoomState {
   votes: Record<string, Record<string, boolean>>;
   globalState: string;
   tickerText: string;
-  clockConfig: {
-    mode: "static" | "countdown" | "stopwatch";
-    baseTime: number; // Tiempo acumulado en segundos
-    isRunning: boolean; // Si el reloj está corriendo
-    startTime: number | null; // Timestamp de cuando se inició (null si pausado/estático)
-    pausedAt: number | null; // Timestamp de cuando se pauso (null si no pausado)
-  };
+  clockConfig: ClockConfig;
   tickerSpeed: number; // Velocidad en segundos del ciclo
   channels: Record<string, ChatMessage[]>; // { global: [], private_uid: [], room_name: [] }
   // Estados personalizables
@@ -128,7 +130,8 @@ export interface AppStore {
   ) => Promise<void>;
   gmWhisper: (playerId: string, text: string) => Promise<void>;
   gmResetRoom: () => Promise<void>;
-  gmUpdatePlayerRole: (playerId: string, role: string) => Promise<void>;
+  gmTogglePlayerRole: (playerId: string, role: string) => Promise<void>;
+  gmTurnOffSession: () => Promise<void>;
 
   // State Management Actions
   gmAddGlobalState: (state: string) => void;

@@ -134,15 +134,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
       {isUserMenuOpen && (
         <ModalWrapper
-          title="Menú de Usuario"
+          title="Opciones de usuario"
           onClose={() => {
             setIsUserMenuOpen(false);
             setIsEditingNickname(false);
           }}
         >
-          <div className="space-y-4">
+          <div className="space-y-2">
             {/* Nickname Edit Section */}
-            <div className="bg-transparent p-4 rounded-lg border border-neutral-700">
+            <div className="bg-transparent p-2 text-3xl font-bold">
               {isEditingNickname ? (
                 <div className="flex flex-col gap-2">
                   <input
@@ -183,9 +183,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 </div>
               ) : (
                 <div className="flex items-center justify-start">
-                  <span className="gap-4 text-sm text-neutral-400">
-                    Nickname:
-                  </span>
                   <span className="font-bold text-white gap-4">{nickname}</span>
                 </div>
               )}

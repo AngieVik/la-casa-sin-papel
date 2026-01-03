@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useStore } from "../store";
 import { formatTimeToMMSS } from "../hooks/useGameClock";
 
@@ -26,6 +26,7 @@ export const useGMInterface = () => {
   const gmSelectGame = useStore((state) => state.gmSelectGame);
   const gmStartGame = useStore((state) => state.gmStartGame);
   const gmEndGame = useStore((state) => state.gmEndGame);
+  const gmTurnOffSession = useStore((state) => state.gmTurnOffSession);
   const gmSetStaticTime = useStore((state) => state.gmSetStaticTime);
   const gmKickPlayer = useStore((state) => state.gmKickPlayer);
   const gmRemovePlayer = useStore((state) => state.gmRemovePlayer);
@@ -46,6 +47,7 @@ export const useGMInterface = () => {
   const [showStartGameConfirm, setShowStartGameConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showExpelConfirm, setShowExpelConfirm] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
 
   // Global actions modal state
   const [showGlobalMessageModal, setShowGlobalMessageModal] = useState(false);
@@ -64,7 +66,7 @@ export const useGMInterface = () => {
     "global" | "player" | "public" | "role" | null
   >(null);
   const [assigningState, setAssigningState] = useState<{
-    type: "player" | "public";
+    type: "player" | "public" | "role";
     value: string;
   } | null>(null);
   const [deleteStateConfirm, setDeleteStateConfirm] = useState<{
@@ -112,7 +114,8 @@ export const useGMInterface = () => {
   };
 
   const handleEndSession = async () => {
-    await gmEndGame();
+    // Apagar / Turn Off Session Logic
+    await gmTurnOffSession();
     setNickname("");
     setGM(false);
     setCurrentView("login");
@@ -223,6 +226,8 @@ export const useGMInterface = () => {
     setShowResetConfirm,
     showExpelConfirm,
     setShowExpelConfirm,
+    showAuditModal,
+    setShowAuditModal,
     showGlobalMessageModal,
     setShowGlobalMessageModal,
     showGlobalDivineVoiceModal,
@@ -271,6 +276,7 @@ export const useGMInterface = () => {
     handleExpelPlayer,
     handleSoftReset,
     handleKickPlayer,
+    gmRemovePlayer,
 
     // Misc
     gmToast,

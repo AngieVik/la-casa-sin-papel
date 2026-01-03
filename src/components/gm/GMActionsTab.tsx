@@ -71,13 +71,14 @@ const GMActionsTab: React.FC<GMActionsTabProps> = ({
         {/* Global Message Button */}
         <button
           onClick={onShowGlobalMessageModal}
-          className="aspect-[2/1] bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-1 group hover:bg-neutral-800 hover:border-indigo-500 transition-all"
+          className="aspect-square sm:aspect-[2/1] bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-1 group hover:bg-neutral-800 hover:border-indigo-500 transition-all"
         >
           <div className="p-1 bg-indigo-500/10 rounded-full group-hover:bg-indigo-500 text-indigo-500 group-hover:text-white transition-colors">
             <MessageSquare size={32} />
           </div>
           <span className="font-bold text-neutral-300 group-hover:text-white">
-            Mensaje Global
+            Mensaje
+            <span className="hidden sm:inline"> Global</span>
           </span>
         </button>
 
@@ -88,13 +89,13 @@ const GMActionsTab: React.FC<GMActionsTabProps> = ({
               setShowGlobalSoundDropdown(!showGlobalSoundDropdown);
               setShowGlobalVibrationDropdown(false);
             }}
-            className="aspect-[2/1] w-full bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-1 group hover:bg-neutral-800 hover:border-pink-500 transition-all"
+            className="aspect-square sm:aspect-[2/1] w-full bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-1 group hover:bg-neutral-800 hover:border-pink-500 transition-all"
           >
             <div className="p-1 bg-pink-500/10 rounded-full group-hover:bg-pink-500 text-pink-500 group-hover:text-white transition-colors">
               <Volume2 size={32} />
             </div>
             <span className="font-bold text-neutral-300 group-hover:text-white">
-              Efecto Sonido
+              <span className="hidden sm:inline">Efecto </span>Sonido
             </span>
           </button>
           {showGlobalSoundDropdown && (
@@ -125,7 +126,7 @@ const GMActionsTab: React.FC<GMActionsTabProps> = ({
               setShowGlobalVibrationDropdown(!showGlobalVibrationDropdown);
               setShowGlobalSoundDropdown(false);
             }}
-            className="aspect-[2/1] w-full bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-1 group hover:bg-neutral-800 hover:border-orange-500 transition-all"
+            className="aspect-square sm:aspect-[2/1] w-full bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-1 group hover:bg-neutral-800 hover:border-orange-500 transition-all"
           >
             <div className="p-1 bg-orange-500/10 rounded-full group-hover:bg-orange-500 text-orange-500 group-hover:text-white transition-colors">
               <Zap size={32} />
@@ -162,7 +163,7 @@ const GMActionsTab: React.FC<GMActionsTabProps> = ({
         {/* Divine Voice Button */}
         <button
           onClick={onShowDivineVoiceModal}
-          className="aspect-[2/1] bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-1 group hover:bg-neutral-800 hover:border-blue-500 transition-all"
+          className="aspect-square sm:aspect-[2/1] bg-neutral-950 border border-neutral-800 rounded-2xl flex flex-col items-center justify-center gap-1 group hover:bg-neutral-800 hover:border-blue-500 transition-all"
         >
           <div className="p-1 bg-blue-500/10 rounded-full group-hover:bg-blue-500 text-blue-500 group-hover:text-white transition-colors">
             <Mic size={32} />
@@ -311,15 +312,16 @@ const GMActionsTab: React.FC<GMActionsTabProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 animate-in slide-in-from-right-4 duration-300">
-        <div className="mt-2 p-2 bg-red-950/20 border border-red-900/30 rounded-xl ">
-          <h4 className="text-red-500 font-bold mb-4 flex items-center gap-2">
+      <div className="pt-10 flex w-full justify-start items-start animate-in slide-in-from-right-4 duration-300">
+        {/* Eliminamos flex-1 para que no se estire y dejamos min-w-fit */}
+        <div className="mt-2 p-3 bg-red-950/20 border border-red-900/30 rounded-xl min-w-fit w-auto">
+          <h4 className="text-red-500 font-bold mb-4 flex items-center gap-2 whitespace-nowrap">
             <Settings size={16} /> Zona peligrosa
           </h4>
-          <div className="flex gap-4 flex-wrap">
+          <div className="flex">
             <button
               onClick={onShowShutdownConfirm}
-              className="p-1 bg-red-900/20 text-red-400 border border-red-900/50 rounded-lg hover:bg-red-900 hover:text-white text-sm transition-colors flex items-center gap-2"
+              className="p-2 bg-red-900/20 text-red-400 border border-red-900/50 rounded-lg hover:bg-red-900 hover:text-white text-sm transition-colors flex items-center gap-2 whitespace-nowrap"
             >
               <PowerOff size={16} /> SHUTDOWN{" "}
               <span className="hidden sm:inline">(Reset Total)</span>
