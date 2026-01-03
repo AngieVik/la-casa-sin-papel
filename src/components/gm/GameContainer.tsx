@@ -68,7 +68,15 @@ const GameContainer: React.FC = () => {
 
       {/* Renderiza el componente del juego */}
       <div className="p-4 bg-neutral-900/50 border border-neutral-800 rounded-xl">
-        <gameModule.Component />
+        <React.Suspense
+          fallback={
+            <div className="flex items-center justify-center h-64 text-neutral-500 animate-pulse">
+              Cargando juego...
+            </div>
+          }
+        >
+          <gameModule.Component />
+        </React.Suspense>
       </div>
     </div>
   );

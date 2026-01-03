@@ -15,12 +15,18 @@ export interface GameSpecificData {
   globalStates: string[]; // Ej: ["Niebla"]
 }
 
+export type GameId = "test_game"; // Añadir aquí nuevos IDs de juegos
+
 export interface GameMetadata {
-  id: string;
+  id: GameId;
   title: string;
   description: string;
   minRoles: string[]; // Roles mínimos requeridos para Fase 0
   specificData: GameSpecificData; // Datos que se suman a los defaults
+  // Visual Assets
+  icon?: React.ComponentType<{ size?: number | string; className?: string }>;
+  coverImage?: string; // URL o path de la imagen
+  themeColor?: string; // Clase de Tailwind o Hex
 }
 
 export interface GameModule extends GameMetadata {

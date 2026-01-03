@@ -5,7 +5,8 @@ import { GameMetadata } from "../types";
 // 1. CONFIGURACIÓN DEL JUEGO (METADATA)
 // ==========================================
 export const newGameMeta: GameMetadata = {
-  id: "", // ID único del juego (ej: "werewolf")
+  // @ts-expect-error - Añade tu ID a GameId en types.ts
+  id: "new_game", // ID único del juego (debe estar en GameId)
   title: "", // Título visible (ej: "Hombres Lobo")
   description: "", // Breve descripción
   minRoles: [], // Roles mínimos requeridos para Fase 0
@@ -15,14 +16,34 @@ export const newGameMeta: GameMetadata = {
     publicStates: [], // Estados públicos (ej: "Sheriff")
     globalStates: [], // Estados globales (ej: "Fase de Discusión")
   },
+  icon: undefined, // Importa un icono de lucide-react (ej: Moon)
+  themeColor: "", // Color temático (ej: "text-purple-500")
 };
 
 // ==========================================
-// 2. COMPONENTE PRINCIPAL
+// 2. LÓGICA DEL JUEGO (HOOK PERSONALIZADO)
+// ==========================================
+// Recomendación: Mover a un archivo separado (ej: useNewGame.ts) si crece mucho
+const useGameLogic = () => {
+  // TODO: Estado y lógica aquí
+  const [exampleState, setExampleState] = React.useState(0);
+
+  const handleAction = () => {
+    console.log("Acción ejecutada");
+    setExampleState((prev) => prev + 1);
+  };
+
+  return {
+    exampleState,
+    handleAction,
+  };
+};
+
+// ==========================================
+// 3. COMPONENTE PRINCIPAL
 // ==========================================
 const NewGame: React.FC = () => {
-  // TODO: Hooks y lógica del juego aquí
-  // const { room } = useStore((state) => state); (Si necesitas estado global)
+  const { exampleState, handleAction } = useGameLogic();
 
   return (
     <div className="space-y-6 p-4">
@@ -35,10 +56,15 @@ const NewGame: React.FC = () => {
         </p>
       </div>
 
-      {/* TODO: Implementar UI del juego */}
+      {/* UI Area */}
       <div className="p-8 border border-dashed border-neutral-700 rounded-xl text-center text-neutral-500">
-        <p>Aquí va la interfaz del juego.</p>
-        <p className="text-xs mt-2">Edita src/games/NewGame.tsx</p>
+        <p>Estado de prueba: {exampleState}</p>
+        <button
+          onClick={handleAction}
+          className="mt-4 px-4 py-2 bg-neutral-800 rounded-lg hover:bg-neutral-700 text-white text-sm"
+        >
+          Ejecutar Acción
+        </button>
       </div>
     </div>
   );

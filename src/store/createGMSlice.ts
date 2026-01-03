@@ -63,9 +63,6 @@ export const createGMSlice: StateCreator<
     | "gmCreateChatRoom"
     | "gmAddPlayerToRoom"
     | "gmRemovePlayerFromRoom"
-    | "gmCreateChatRoom"
-    | "gmAddPlayerToRoom"
-    | "gmRemovePlayerFromRoom"
     | "gmCloseChatRoom"
     | "gmTurnOffSession"
     | "prepareGame"
@@ -176,33 +173,10 @@ export const createGMSlice: StateCreator<
     const { room } = get();
     const updates: Record<string, unknown> = {
       status: "waiting",
-      // channels: null, // User didn't explicitly say to clear channels in gmEndGame, but said "Patio".
-      // Usually returning to patio implies we might keep chat?
-      // The instructions say: "Actualmente solo cambia el estado a waiting. Modifícalo para que realice una limpieza inteligente..."
-      // It DOES NOT say to clear channels in step 1. It says "channels: null" in step 2 (gmTurnOffSession).
-      // However the ORIGINAL code checked above had "channels: null".
-      // "Limpieza de Jugadores... Filtrado de Votos...".
-      // I will remove "channels: null" from here only if the user meant to keep them,
-      // but usually "Reiniciar" implies starting over.
-      // BUT Step 2 implies "channels: null" is a feature of "Apagar".
-      // Let's stick to EXACT instructions:
-      // "Filtrado de Votos... Limpieza de Jugadores...".
-      // It DOES NOT mention clearing channels explicitly in point 1, BUT the original code did.
-      // I'll keep the original behavior for channels if it's not contradicted,
-      // OR better: The user wants "Reiniciar / Patio". Usually you want to keep the chat in the lobby.
-      // But clearing channels was there.
-      // Let's look at point 2: "Debe hacer un update que establezca: ... channels: null".
-      // This suggests point 2 is the "hard wipe". Point 1 is "smart clean".
-      // I will REMOVE channels: null from gmEndGame to preserve chat history in the lobby,
-      // unless "Limpieza inteligente" implies removing game-specific things.
-      // "channels" usually contains the chat history.
-      // I will err on the side of preserving chat for "Reiniciar" (Patio) unless told otherwise,
-      // since "Apagar" handles the wipe.
+      // Mantenemos los canales (historial de chat) activos en el lobby
     };
 
     // 1. Filtrado de Votos (Sanitization)
-    // Recorre todos los votos. Si un voto pertenece a un playerId que NO está en la lista de jugadores
-    // o que tiene status offline, elimina ese voto. Mantén los votos de los jugadores online.
     if (room.votes) {
       Object.entries(room.votes).forEach(([gameId, gameVotes]) => {
         Object.keys(gameVotes).forEach((voterId) => {
@@ -215,17 +189,15 @@ export const createGMSlice: StateCreator<
       });
     }
 
-    // 2. Limpieza de Jugadores
+    // 2. Limpieza de Jugadores (Reset de estado de juego, mantener conexión)
     room.players.forEach((p) => {
-      // Si offline o no está en sala (status offline covers it mostly as room.players are the present ones)
       if (p.status === "offline") {
-        updates[`players/${p.id}/roles`] = null; // or []
+        updates[`players/${p.id}/roles`] = null;
         updates[`players/${p.id}/playerStates`] = null;
         updates[`players/${p.id}/publicStates`] = null;
-        // Also ensure ready is false
         updates[`players/${p.id}/ready`] = false;
       } else {
-        // Online: mantenles sus datos pero pon ready: false
+        // Online: mantenles sus datos básicos pero pon ready: false
         updates[`players/${p.id}/ready`] = false;
       }
     });
@@ -234,8 +206,7 @@ export const createGMSlice: StateCreator<
   },
 
   gmTurnOffSession: async () => {
-    // Objetivo: cerrar la sesión de todos y limpiar la partida.
-    // players: null, votes: null, channels: null, chatRooms: null, status: "waiting", globalState: "Sesión Finalizada"
+    // Objetivo: cerrar la sesión de todos y limpiar la partida totalmente (Hard Wipe).
     const updates = {
       players: null,
       votes: null,
@@ -243,7 +214,6 @@ export const createGMSlice: StateCreator<
       chatRooms: null,
       status: "waiting",
       globalState: "Sesión Finalizada",
-      // Also might want to stop the clock?
       clockConfig: {
         ...DEFAULT_CLOCK_CONFIG,
         mode: "static",
@@ -290,11 +260,10 @@ export const createGMSlice: StateCreator<
   },
 
   gmResetRoom: async () => {
-    // Definir estado inicial limpio para sobrescribir TODO
+    // Soft Reset: Reinicia el juego pero mantiene a los jugadores conectados y las configuraciones.
     const initialRoomState = {
       status: "waiting",
-      // No channels, chatRooms, votes, notifications
-      channels: null,
+      channels: null, // Limpia chat
       chatRooms: null,
       votes: null,
       notifications: null,
@@ -306,16 +275,12 @@ export const createGMSlice: StateCreator<
       },
       globalState: "Arrancando sesión...",
       ticker: "Sistema reiniciado. Mantengan la calma.",
-      // Players object will be constructed below to keep only basics
       players: {},
-      // Keep definitions but clear usage if needed?
-      // The requirement says "sobrescribir completamente".
-      // But we probably want to keep the players logged in, just reset their state.
     };
 
     const { room } = get();
 
-    // Construct the players object to preserve connected users but reset their game state
+    // Reconstruir objeto de jugadores (solo datos de conexión)
     const resetPlayers: Record<string, any> = {};
     room.players.forEach((p) => {
       resetPlayers[p.id] = {
@@ -323,24 +288,14 @@ export const createGMSlice: StateCreator<
         ready: false,
         playerStates: [],
         publicStates: [],
-        roles: ["Jugador"], // Reset roles to default array
-        // Preserve nickname, isGM, id, status, lastSeen
+        roles: ["Jugador"], // Reset a rol por defecto
       };
     });
 
-    // Merge players into the initial state
     const stateToSet = {
       ...initialRoomState,
       players: resetPlayers,
-      // Preserve option lists if desired, otherwise they rely on default code values if they are hardcoded.
-      // Assuming dynamic lists should be preserved or reset?
-      // "sobrescribir completamente el nodo rooms/defaultRoom, garantizando que no queden datos basura"
-      // If we want to keep the *definitions* (like roles list, states list), we should copy them from current state
-      // OR reset them to defaults.
-      // Let's assume we keep the configurations (roles, globalStates options, etc) but reset the *gameplay* elements.
-      // However, the prompt says "garantizando que no queden datos basura".
-      // Let's keep the lists (roles, globalStates, playerStates options, publicStates options)
-      // so the GM doesn't lose their customized lists, but reset the *values*.
+      // Mantenemos las listas de opciones actuales (roles, estados)
       roles: room.roles,
       globalStates: room.globalStates,
       playerStates: room.playerStates,
@@ -478,7 +433,8 @@ export const createGMSlice: StateCreator<
     const { room } = get();
     const newRoles = room.roles.map((r) => (r === oldRole ? newRole : r));
     update(ref(db, ROOM_REF), { roles: newRoles });
-    // Also update any players with this role
+    
+    // Actualizar también a los jugadores que tengan este rol
     room.players.forEach((player) => {
       if (player.roles?.includes(oldRole)) {
         const newPlayerRoles = player.roles.map((r) =>
@@ -495,11 +451,11 @@ export const createGMSlice: StateCreator<
     const { room } = get();
     const newRoles = room.roles.filter((r) => r !== role);
     update(ref(db, ROOM_REF), { roles: newRoles });
-    // Reset any players with this role
+    
+    // Quitar el rol a los jugadores que lo tengan
     room.players.forEach((player) => {
       if (player.roles?.includes(role)) {
         const newPlayerRoles = player.roles.filter((r) => r !== role);
-        // If no roles left, maybe add default or keep empty? User says "multiple", so empty is fine.
         update(ref(db, `${ROOM_REF}/players/${player.id}`), {
           roles: newPlayerRoles,
         });
@@ -590,7 +546,7 @@ export const createGMSlice: StateCreator<
   gmCloseChatRoom: async (roomId: string) => {
     const roomRef = ref(db, `${ROOM_REF}/chatRooms/${roomId}`);
     await remove(roomRef);
-    // Also remove the channel messages
+    // Borrar mensajes asociados al canal de esa sala
     const channelRef = ref(db, `${ROOM_REF}/channels/room_${roomId}`);
     await remove(channelRef);
   },
@@ -599,26 +555,33 @@ export const createGMSlice: StateCreator<
 
   prepareGame: async (gameModule: GameModule) => {
     const { room } = get();
+    
+    // IMPORTANTE: Si ya hay un juego corriendo, se debería limpiar primero para evitar corrupción de roles.
+    // Usamos los defaults almacenados o las constantes como base.
+    const baseRoles = room.gameStatus === 'lobby' ? room.roles : (room.defaultRoles || DEFAULT_ROLES);
+    const basePlayerStates = room.gameStatus === 'lobby' ? room.playerStates : (room.defaultPlayerStates || DEFAULT_PLAYER_STATES);
+    const basePublicStates = room.gameStatus === 'lobby' ? room.publicStates : (room.defaultPublicStates || DEFAULT_PUBLIC_STATES);
+    const baseGlobalStates = room.gameStatus === 'lobby' ? room.globalStates : (room.defaultGlobalStates || DEFAULT_GLOBAL_STATES);
 
-    // Merge específicos del juego con los actuales
+    // Merge específicos del juego
     const mergedRoles = [
-      ...new Set([...room.roles, ...gameModule.specificData.roles]),
+      ...new Set([...baseRoles, ...gameModule.specificData.roles]),
     ];
     const mergedPlayerStates = [
       ...new Set([
-        ...room.playerStates,
+        ...basePlayerStates,
         ...gameModule.specificData.playerStates,
       ]),
     ];
     const mergedPublicStates = [
       ...new Set([
-        ...room.publicStates,
+        ...basePublicStates,
         ...gameModule.specificData.publicStates,
       ]),
     ];
     const mergedGlobalStates = [
       ...new Set([
-        ...room.globalStates,
+        ...baseGlobalStates,
         ...gameModule.specificData.globalStates,
       ]),
     ];
@@ -633,7 +596,7 @@ export const createGMSlice: StateCreator<
       playerStates: mergedPlayerStates,
       publicStates: mergedPublicStates,
       globalStates: mergedGlobalStates,
-      // Guardar los defaults actuales para poder restaurar
+      // Guardar los defaults (si no existían ya) para poder restaurar al cerrar
       defaultRoles: room.defaultRoles || DEFAULT_ROLES,
       defaultPlayerStates: room.defaultPlayerStates || DEFAULT_PLAYER_STATES,
       defaultPublicStates: room.defaultPublicStates || DEFAULT_PUBLIC_STATES,
@@ -657,7 +620,7 @@ export const createGMSlice: StateCreator<
   stopGame: async () => {
     const { room } = get();
 
-    // Obtener los roles/estados del juego que se cerrará
+    // Identificar roles/estados exclusivos del juego para limpiarlos de los jugadores
     const gameRoles = room.roles.filter((r) => !room.defaultRoles.includes(r));
     const gamePlayerStates = room.playerStates.filter(
       (s) => !room.defaultPlayerStates.includes(s)
@@ -671,7 +634,7 @@ export const createGMSlice: StateCreator<
       gameStatus: "lobby",
       gameSelected: null,
       gamePhase: 0,
-      // Restaurar a valores por defecto
+      // Restaurar a valores por defecto (guardados en prepareGame)
       roles: room.defaultRoles,
       playerStates: room.defaultPlayerStates,
       publicStates: room.defaultPublicStates,
@@ -686,7 +649,6 @@ export const createGMSlice: StateCreator<
 
       // Filtrar roles del juego
       const cleanedRoles = currentRoles.filter((r) => !gameRoles.includes(r));
-      // Filtrar estados del juego
       const cleanedPlayerStates = currentPlayerStates.filter(
         (s) => !gamePlayerStates.includes(s)
       );
@@ -709,7 +671,7 @@ export const createGMSlice: StateCreator<
   // ============ SHUTDOWN & REFRESH ACTIONS ============
 
   gmShutdown: async () => {
-    // Apagado total: limpia todo y expulsa a todos
+    // Apagado total: limpia todo (Factory Reset)
     await update(ref(db, ROOM_REF), {
       status: "shutdown",
       players: null,

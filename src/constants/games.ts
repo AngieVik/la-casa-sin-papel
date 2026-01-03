@@ -1,5 +1,8 @@
+import React from "react";
 import { GameModule } from "../types";
-import TestGame, { testGameMeta } from "../games/TestGame";
+import { testGameMeta } from "../games/TestGame";
+
+const TestGame = React.lazy(() => import("../games/TestGame"));
 
 /**
  * GAMES - Registro de juegos disponibles

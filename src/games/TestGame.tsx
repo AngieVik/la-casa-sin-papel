@@ -13,6 +13,8 @@ export const testGameMeta: GameMetadata = {
     publicStates: ["Ganador"],
     globalStates: ["Ronda Activa"],
   },
+  icon: Dice5,
+  themeColor: "text-red-500",
 };
 
 const TestGame: React.FC = () => {
