@@ -154,30 +154,30 @@ const ChatModal: React.FC = () => {
   const roomTabs = visibleRooms.map((room) => ({
     id: room.id,
     label: room.name.toUpperCase(),
-    icon: <Users size={14} />,
+    icon: <Users size={16} />,
   }));
 
   const allTabs = [...baseTabs, ...roomTabs];
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[100] flex flex-col animate-in slide-in-from-bottom duration-300">
+    <div className="fixed inset-x-0 bottom-0 m- z-[100] flex flex-col animate-in slide-in-from-bottom duration-300">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm -z-10"
+        className="rounded-full absolute inset-0 bg-black/60 backdrop-blur-sm -z-10"
         style={{ height: "100vh", bottom: 0 }}
         onClick={toggleChat}
       />
 
       {/* Chat Container */}
       <div
-        className="bg-neutral-900 border-t border-neutral-800 rounded-t-3xl shadow-2xl flex flex-col overflow-hidden"
+        className="bg-neutral-900 border-t p- border-neutral-400 rounded-t-3xl shadow-2xl flex flex-col overflow-hidden"
         style={{ height: "85vh" }}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-1 border-b rounded-t-3xl border-neutral-800 bg-neutral-950/80">
           <div className="flex items-center gap-3">
             <div className="p-1 ml-4 bg-green-900/30 rounded border border-green-500/50">
-              <ShieldCheck size={18} className="text-green-500" />
+              <ShieldCheck size={14} className="text-green-500" />
             </div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-white text-sm tracking-wider">
@@ -191,7 +191,7 @@ const ChatModal: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={toggleChat}
-              className="p-1 mr-4 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
+              className="p- mr-4 rounded-full  hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
             >
               <X size={24} />
             </button>
@@ -207,11 +207,11 @@ const ChatModal: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center justify-center p-1 gap-1 ml-2 text-xs font-bold tracking-wider transition-all whitespace-nowrap ${
+                  className={`flex items-center justify-center p-1 pl-4 gap-1 ml-2 my-1 text-xs font-bold tracking-wider transition-all whitespace-nowrap ${
                     activeTab === tab.id
                       ? "text-red-500 border-b-2 border-red-500 bg-neutral-900"
                       : hasUnread
-                      ? "text-yellow-400 bg-yellow-900/20 animate-chat-notify"
+                      ? "text-yellow-400 rounded-full bg-yellow-900/20 animate-chat-notify"
                       : "text-neutral-500 hover:text-neutral-300"
                   }`}
                 >
@@ -227,9 +227,9 @@ const ChatModal: React.FC = () => {
                           e.stopPropagation();
                           setManagingRoom(tab.id);
                         }}
-                        className="ml-1 p-1 rounded hover:bg-neutral-700 text-neutral-400 hover:text-white"
+                        className="ml-1 p-1 hover:bg-neutral-700 text-neutral-400 hover:text-white"
                       >
-                        <Settings size={12} />
+                        <Settings size={18} />
                       </button>
                     )}
                 </button>
@@ -241,10 +241,10 @@ const ChatModal: React.FC = () => {
           {isGM && (
             <button
               onClick={() => setShowCreateRoomModal(true)}
-              className="ml-2 p-1 m-1 aspect-[5/1] rounded bg-indigo-900/40 hover:bg-indigo-900/60 text-indigo-400 border border-indigo-500/30 transition-all flex items-center justify-center"
+              className="ml-2 p-1 m-1 aspect-[5/1] rounded bg-indigo-900/20 hover:bg-indigo-900/60 text-indigo-400 border border-indigo-500/30 transition-all flex items-center justify-center"
               title="Crear Sala"
             >
-              <Plus size={16} />
+              <Plus size={18} />
             </button>
           )}
         </div>
@@ -252,7 +252,7 @@ const ChatModal: React.FC = () => {
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <div className="text-center py-4">
-            <span className="text-xs font-mono text-neutral-600 uppercase border-b border-neutral-800 pb-1">
+            <span className="text-xs font-mono text-neutral-600 border-b border-neutral-800 pb-1">
               {activeTab === "global" && "Canal Global Activo"}
               {activeTab === "privado" && "Canal Privado con GM"}
               {activeTab !== "global" &&
@@ -436,7 +436,7 @@ const ChatModal: React.FC = () => {
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
             <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
-              <h3 className="font-bold text-white uppercase tracking-wider">
+              <h3 className="font-bold text-white tracking-wider">
                 Crear Sala Privada
               </h3>
               <button
@@ -511,7 +511,7 @@ const ChatModal: React.FC = () => {
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
             <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
-              <h3 className="font-bold text-white uppercase tracking-wider">
+              <h3 className="font-bold text-white tracking-wider">
                 Gestionar: {currentManagedRoom.name}
               </h3>
               <button
@@ -525,7 +525,7 @@ const ChatModal: React.FC = () => {
             <div className="p-4 space-y-4">
               {/* Current Members */}
               <div>
-                <label className="block text-xs text-neutral-500 uppercase mb-2">
+                <label className="block text-xs text-neutral-500 mb-2">
                   Miembros Actuales
                 </label>
                 <div className="space-y-1">
@@ -561,7 +561,7 @@ const ChatModal: React.FC = () => {
 
               {/* Add Player */}
               <div>
-                <label className="block text-xs text-neutral-500 uppercase mb-2">
+                <label className="block text-xs text-neutral-500 mb-2">
                   Añadir Jugador
                 </label>
                 <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
@@ -627,7 +627,7 @@ const ChatModal: React.FC = () => {
             <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
               <div className="bg-neutral-900 border border-neutral-700 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
                 <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
-                  <h3 className="font-bold text-white uppercase tracking-wider">
+                  <h3 className="font-bold text-white tracking-wider">
                     Responder a: {player.nickname}
                   </h3>
                   <button
@@ -662,7 +662,7 @@ const ChatModal: React.FC = () => {
                     </div>
                   )}
                   <div>
-                    <label className="block text-xs text-neutral-500 uppercase mb-1">
+                    <label className="block text-xs text-neutral-500 mb-1">
                       Enviar Whisper
                     </label>
                     <input
