@@ -39,9 +39,11 @@ const ChatModal: React.FC = () => {
   );
   const gmCloseChatRoom = useStore((state) => state.gmCloseChatRoom);
   const gmWhisper = useStore((state) => state.gmWhisper);
+  const activeTab = useStore((state) => state.ui.activeTab);
+  const setActiveTab = useStore((state) => state.setActiveChannel);
+  const unreadTabs = useStore((state) => state.ui.unreadTabs);
 
   // Local state
-  const [activeTab, setActiveTab] = useState<TabType>("global");
   const [messageText, setMessageText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -199,35 +201,40 @@ const ChatModal: React.FC = () => {
         {/* Tabs - Scrollable with Create Room Button */}
         <div className="flex items-center bg-neutral-950 border-b border-neutral-800 px-2">
           <div className="flex-1 flex overflow-x-auto no-scrollbar">
-            {allTabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center justify-center p-1 gap-1 ml-2 text-xs font-bold tracking-wider transition-all whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? "text-red-500 border-b-2 border-red-500 bg-neutral-900"
-                    : "text-neutral-500 hover:text-neutral-300"
-                }`}
-              >
-                {tab.icon}
-                {tab.label}
-                {/* GM: Settings button for room tabs */}
-                {isGM &&
-                  tab.id !== "global" &&
-                  tab.id !== "privado" &&
-                  activeTab === tab.id && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setManagingRoom(tab.id);
-                      }}
-                      className="ml-1 p-1 rounded hover:bg-neutral-700 text-neutral-400 hover:text-white"
-                    >
-                      <Settings size={12} />
-                    </button>
-                  )}
-              </button>
-            ))}
+            {allTabs.map((tab) => {
+              const hasUnread = unreadTabs.includes(tab.id);
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center justify-center p-1 gap-1 ml-2 text-xs font-bold tracking-wider transition-all whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? "text-red-500 border-b-2 border-red-500 bg-neutral-900"
+                      : hasUnread
+                      ? "text-yellow-400 bg-yellow-900/20 animate-chat-notify"
+                      : "text-neutral-500 hover:text-neutral-300"
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                  {/* GM: Settings button for room tabs */}
+                  {isGM &&
+                    tab.id !== "global" &&
+                    tab.id !== "privado" &&
+                    activeTab === tab.id && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setManagingRoom(tab.id);
+                        }}
+                        className="ml-1 p-1 rounded hover:bg-neutral-700 text-neutral-400 hover:text-white"
+                      >
+                        <Settings size={12} />
+                      </button>
+                    )}
+                </button>
+              );
+            })}
           </div>
 
           {/* GM: Create Room Button moved to tabs line */}

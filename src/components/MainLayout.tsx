@@ -25,8 +25,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const userId = useStore((state) => state.user.id);
   const isGM = useStore((state) => state.user.isGM);
   const tickerSpeed = useStore((state) => state.room.tickerSpeed);
-  const setActiveChannel = useStore((state) => state.setActiveChannel);
   const logoutPlayer = useStore((state) => state.logoutPlayer);
+  const unreadTabs = useStore((state) => state.ui.unreadTabs);
 
   // Calculate clock time locally using the passive hook
   const timeString = useGameClock(clockConfig);
@@ -71,27 +71,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans selection:bg-red-900 selection:text-white pb-20 md:pb-0">
       {/* HEADER: Integrado */}
-        {/* Definición de Animación en línea */}
-        <header className="h-16 border-b border-neutral-800 bg-neutral-950 shadow-md sticky top-0 z-50">
-        <style>
-          {`
-            @keyframes marqueeHeader {  /* <--- CORREGIDO AQUÍ */
-              0% { transform: translateX(100vw); }
-              100% { transform: translateX(-100%); }
-            }
-            .animate-marquee-header {
-              animation: marqueeHeader linear infinite;
-              will-change: transform;
-            }
-          `}
-        </style>
-
+      {/* Definición de Animación en línea */}
+      <header className="h-16 border-b border-neutral-800 bg-neutral-950 shadow-md sticky top-0 z-50">
         <div className="flex items-center justify-between h-full w-full px-4 overflow-hidden">
           {/* 1. IZQUIERDA: Reloj y Estado */}
           <div className="flex-shrink-0 flex items-center gap-4 pr-4 border-r border-neutral-800/50 h-10 my-auto z-20 bg-neutral-950">
             <div
               className={`w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor] transition-colors duration-500 ${
-                isSync ? "bg-green-500 text-green-500" : "bg-red-500 text-red-500"
+                isSync
+                  ? "bg-green-500 text-green-500"
+                  : "bg-red-500 text-red-500"
               }`}
             />
             <div className="flex items-center gap-2 text-xl font-mono font-bold tracking-widest text-red-600">
@@ -135,9 +124,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       {/* CHAT FAB (Botón Flotante) */}
       <button
         onClick={toggleChat}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 z-50 ring-4 ring-neutral-900"
+        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all z-50 ring-4 ring-neutral-900 ${
+          unreadTabs.length > 0
+            ? "bg-yellow-500 text-black scale-125 animate-chat-notify shadow-[0_0_20px_rgba(234,179,8,0.5)]"
+            : "bg-red-600 hover:bg-red-700 text-white hover:scale-110 active:scale-95"
+        }`}
       >
-        <MessageCircle className="w-7 h-7" />
+        <MessageCircle
+          className={`w-7 h-7 ${unreadTabs.length > 0 ? "fill-current" : ""}`}
+        />
       </button>
 
       {/* MODALES */}

@@ -423,13 +423,11 @@ const UIGameMaster: React.FC = () => {
                         <td className="p-2 text-right">
                           <button
                             onClick={() => {
-                              if (
-                                confirm(
-                                  `¿Eliminar sesión de ${player.nickname}?`
-                                )
-                              ) {
-                                gm.gmRemovePlayer(player.id);
-                              }
+                              gm.setPlayerToDelete({
+                                id: player.id,
+                                nickname: player.nickname,
+                              });
+                              gm.setShowAuditDeleteConfirm(true);
                             }}
                             className="p-1.5 bg-red-900/20 hover:bg-red-900/40 text-red-500 rounded transition-colors"
                             title="Limpiar Sesión"
@@ -496,6 +494,21 @@ const UIGameMaster: React.FC = () => {
             </div>
           </div>
         </ModalWrapper>
+      )}
+      {/* AUDIT DELETE CONFIRMATION MODAL */}
+      {gm.showAuditDeleteConfirm && gm.playerToDelete && (
+        <ConfirmModal
+          title="Eliminar Sesión"
+          message={`¿Seguro que quieres eliminar la sesión de ${gm.playerToDelete.nickname}? Esta acción es irreversible.`}
+          confirmText="Eliminar"
+          cancelText="Cancelar"
+          variant="danger"
+          onConfirm={gm.handleAuditDelete}
+          onCancel={() => {
+            gm.setShowAuditDeleteConfirm(false);
+            gm.setPlayerToDelete(null);
+          }}
+        />
       )}
     </div>
   );

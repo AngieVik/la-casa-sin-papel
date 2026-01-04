@@ -9,21 +9,14 @@ import {
 import { db } from "../firebaseConfig";
 import { ref, onValue, update, set as firebaseSet } from "firebase/database";
 
-const ROOM_REF = "rooms/defaultRoom";
-
-export const DEFAULT_CLOCK_CONFIG = {
-  mode: "static" as const,
-  baseTime: 0,
-  isRunning: false,
-  startTime: null,
-  pausedAt: null,
-};
-
-// Valores por defecto para restaurar al cerrar un juego
-export const DEFAULT_ROLES = ["Jugador"];
-export const DEFAULT_PLAYER_STATES = ["Envenenado", "Peruano", "De Viator"];
-export const DEFAULT_PUBLIC_STATES = ["Vivo", "Muerto", "Carcel"];
-export const DEFAULT_GLOBAL_STATES = ["Día", "Noche"];
+import { ROOM_REF } from "../constants/firebase";
+import {
+  DEFAULT_CLOCK_CONFIG,
+  DEFAULT_ROLES,
+  DEFAULT_PLAYER_STATES,
+  DEFAULT_PUBLIC_STATES,
+  DEFAULT_GLOBAL_STATES,
+} from "../constants/defaults";
 
 export const createGameSlice: StateCreator<
   AppStore,
@@ -89,7 +82,8 @@ export const createGameSlice: StateCreator<
                 currentView: "login",
                 isLoading: false,
                 error: null,
-                activeChannel: "global",
+                activeTab: "global",
+                unreadTabs: [],
               },
             });
             return; // Don't process any more data for non-GM users
@@ -134,6 +128,34 @@ export const createGameSlice: StateCreator<
           const oldStatus = state.room.status;
           const isGM = state.user.isGM;
           let nextView = state.ui.currentView;
+
+          // Detect new messages for granular notifications
+          let newUnreadTabs = [...(state.ui.unreadTabs || [])];
+          if (state.ui.isSync) {
+            Object.keys(channelsData).forEach((channelName) => {
+              const currentCount = channelsData[channelName].length;
+              const prevCount = state.room.channels[channelName]?.length || 0;
+
+              if (currentCount > prevCount) {
+                // Map channel to tab
+                let tabName = "";
+                if (channelName === "global") tabName = "global";
+                else if (channelName.startsWith("private_"))
+                  tabName = "privado";
+                else if (channelName.startsWith("room_"))
+                  tabName = channelName.replace("room_", "");
+
+                if (tabName) {
+                  // Notify if: chat is closed OR activeTab is different
+                  const isVisible =
+                    state.ui.isChatOpen && state.ui.activeTab === tabName;
+                  if (!isVisible && !newUnreadTabs.includes(tabName)) {
+                    newUnreadTabs.push(tabName);
+                  }
+                }
+              }
+            });
+          }
 
           if (!isGM && oldStatus !== newStatus) {
             if (newStatus === "playing") {
@@ -191,6 +213,7 @@ export const createGameSlice: StateCreator<
               ...state.ui,
               isSync: true,
               currentView: nextView,
+              unreadTabs: newUnreadTabs,
             },
           };
         });

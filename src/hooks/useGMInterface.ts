@@ -42,7 +42,6 @@ export const useGMInterface = () => {
 
   // Game Engine actions
   const prepareGame = useStore((state) => state.prepareGame);
-  const setGamePhase = useStore((state) => state.setGamePhase);
   const stopGame = useStore((state) => state.stopGame);
 
   // Shutdown & Refresh actions
@@ -174,6 +173,13 @@ export const useGMInterface = () => {
     ? players.find((p) => p.id === editingPlayer)
     : null;
 
+  // Audit Deletion State
+  const [showAuditDeleteConfirm, setShowAuditDeleteConfirm] = useState(false);
+  const [playerToDelete, setPlayerToDelete] = useState<{
+    id: string;
+    nickname: string;
+  } | null>(null);
+
   // Handlers for global message/voice
   const handleSendGlobalMessage = async () => {
     if (globalMessageText.trim()) {
@@ -207,6 +213,14 @@ export const useGMInterface = () => {
       setEditingPlayer(null);
     }
     setShowExpelConfirm(false);
+  };
+
+  const handleAuditDelete = async () => {
+    if (playerToDelete) {
+      await gmRemovePlayer(playerToDelete.id);
+      setPlayerToDelete(null);
+    }
+    setShowAuditDeleteConfirm(false);
   };
 
   const handleSoftReset = async () => {
@@ -260,6 +274,12 @@ export const useGMInterface = () => {
     showGlobalDivineVoiceModal,
     setShowGlobalDivineVoiceModal,
 
+    // Audit Delete Confirmation
+    showAuditDeleteConfirm,
+    setShowAuditDeleteConfirm,
+    playerToDelete,
+    setPlayerToDelete,
+
     // Modal Inputs
     globalMessageText,
     setGlobalMessageText,
@@ -304,6 +324,7 @@ export const useGMInterface = () => {
     handleSoftReset,
     handleKickPlayer,
     handleTogglePower,
+    handleAuditDelete,
     gmRemovePlayer,
     gmOpenRoom,
 
@@ -312,7 +333,6 @@ export const useGMInterface = () => {
 
     // Game Engine Actions
     prepareGame,
-    setGamePhase,
     stopGame,
 
     // Shutdown & Refresh Actions

@@ -11,7 +11,7 @@ import {
 } from "firebase/database";
 import { signInAnonymously, signOut } from "firebase/auth";
 
-const ROOM_REF = "rooms/defaultRoom";
+import { ROOM_REF } from "../constants/firebase";
 
 export const createAuthSlice: StateCreator<
   AppStore,
@@ -41,7 +41,8 @@ export const createAuthSlice: StateCreator<
     currentView: "login",
     isLoading: false,
     error: null,
-    activeChannel: "global",
+    activeTab: "global",
+    unreadTabs: [],
   },
 
   setCurrentView: (view) =>
@@ -82,7 +83,8 @@ export const createAuthSlice: StateCreator<
               currentView: savedIsGM ? "gm" : "patio",
               isLoading: false,
               error: null,
-              activeChannel: "global",
+              activeTab: "global",
+              unreadTabs: [],
             },
           });
           return; // Session restored successfully
@@ -163,7 +165,8 @@ export const createAuthSlice: StateCreator<
           currentView: isGM ? "gm" : "patio",
           isLoading: false,
           error: null,
-          activeChannel: "global",
+          activeTab: "global",
+          unreadTabs: [],
         },
       });
 
@@ -228,7 +231,8 @@ export const createAuthSlice: StateCreator<
         currentView: "login",
         isLoading: false,
         error: null,
-        activeChannel: "global",
+        activeTab: "global",
+        unreadTabs: [],
       },
     });
   },

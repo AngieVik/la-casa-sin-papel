@@ -1,3 +1,33 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@keyframes marqueeHeader {
+  0% {
+    transform: translateX(100vw);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes chatNotification {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.1);
+    filter: brightness(1.3);
+  }
+}
+
+.animate-marquee-header {
+  animation: marqueeHeader linear infinite;
+  will-change: transform;
+}
+
+.animate-chat-notify {
+  animation: chatNotification 1s ease-in-out infinite;
+}

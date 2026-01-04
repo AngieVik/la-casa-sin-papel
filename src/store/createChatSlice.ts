@@ -3,7 +3,7 @@ import { AppStore } from "../types";
 import { db } from "../firebaseConfig";
 import { ref, push, set as firebaseSet, remove } from "firebase/database";
 
-const ROOM_REF = "rooms/defaultRoom";
+import { ROOM_REF } from "../constants/firebase";
 
 export const createChatSlice: StateCreator<
   AppStore,
@@ -15,10 +15,28 @@ export const createChatSlice: StateCreator<
   >
 > = (set, get) => ({
   toggleChat: () =>
-    set((state) => ({ ui: { ...state.ui, isChatOpen: !state.ui.isChatOpen } })),
+    set((state) => {
+      const isOpening = !state.ui.isChatOpen;
+      const newUnread = isOpening
+        ? state.ui.unreadTabs.filter((t) => t !== state.ui.activeTab)
+        : state.ui.unreadTabs;
+      return {
+        ui: {
+          ...state.ui,
+          isChatOpen: isOpening,
+          unreadTabs: newUnread,
+        },
+      };
+    }),
 
-  setActiveChannel: (channel) =>
-    set((state) => ({ ui: { ...state.ui, activeChannel: channel } })),
+  setActiveChannel: (tab) =>
+    set((state) => ({
+      ui: {
+        ...state.ui,
+        activeTab: tab,
+        unreadTabs: state.ui.unreadTabs.filter((t) => t !== tab),
+      },
+    })),
 
   sendChatMessage: async (text, channel = "global") => {
     const { user } = get();

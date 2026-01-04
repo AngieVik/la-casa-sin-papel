@@ -8,15 +8,14 @@ import {
   remove,
   set as firebaseSet,
 } from "firebase/database";
+import { ROOM_REF } from "../constants/firebase";
 import {
   DEFAULT_CLOCK_CONFIG,
   DEFAULT_ROLES,
   DEFAULT_PLAYER_STATES,
   DEFAULT_PUBLIC_STATES,
   DEFAULT_GLOBAL_STATES,
-} from "./createGameSlice";
-
-const ROOM_REF = "rooms/defaultRoom";
+} from "../constants/defaults";
 
 export const createGMSlice: StateCreator<
   AppStore,

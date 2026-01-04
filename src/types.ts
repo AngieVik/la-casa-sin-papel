@@ -127,7 +127,8 @@ export interface UIState {
   currentView: ViewName;
   isLoading: boolean;
   error: string | null;
-  activeChannel: string; // Canal de chat activo
+  activeTab: string; // Pestaña de chat activa ("global", "privado", o room ID)
+  unreadTabs: string[]; // Lista de pestañas con mensajes no leídos
 }
 
 export interface AppStore {
