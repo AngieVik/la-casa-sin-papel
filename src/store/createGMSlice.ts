@@ -643,8 +643,20 @@ export const createGMSlice: StateCreator<
     // Si avanzamos a fase 1+, el gameStatus pasa a "playing"
     if (phase >= 1) {
       updates.gameStatus = "playing";
+
+      // Lógica Automática de Global States para Hombres Lobo
+      // Fase 1: Día
+      // Fase 2: Noche
+      // Fase 3: Día ...
+      if (phase % 2 !== 0) {
+        updates.globalState = "Día";
+      } else {
+        updates.globalState = "Noche";
+      }
     } else {
       updates.gameStatus = "setup";
+      // Opcional: Resetear a un estado default en setup
+      // updates.globalState = "Fase 0";
     }
 
     await update(ref(db, ROOM_REF), updates);

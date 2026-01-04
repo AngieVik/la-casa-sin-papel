@@ -200,20 +200,20 @@ const GMNarrativeTab: React.FC<GMNarrativeTabProps> = ({
   );
 
   return (
-    <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+    <div className="space-y- animate-in slide-in-from-right-4 duration-300">
       {/* Setup Panel - Only shown when gamePhase === 0 and there's a game */}
       {activeGame && gamePhase === 0 && (
-        <div className="p-6 bg-indigo-950/20 border border-indigo-900/50 rounded-xl space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Users size={20} className="text-indigo-400" />
-            <h3 className="text-lg font-black text-indigo-300">
-              Configuración: {activeGame.title}
+        <div className="p-4 space-y-4">
+          <div className="flex items-center gap-2">
+            <Users size={20} className="text-neutral-400" />
+            <h3 className="text-lg font-black text-neutral-300">
+               {activeGame.title}
             </h3>
           </div>
 
           {/* Min Roles List */}
           <div className="p-4 bg-neutral-950/50 border border-indigo-900/30 rounded-lg">
-            <h4 className="text-sm font-bold text-neutral-400 uppercase tracking-wider mb-3">
+            <h4 className="text-sm font-bold text-neutral-400  tracking-wider mb-3">
               Roles Mínimos Requeridos
             </h4>
             <div className="flex flex-wrap gap-2">
@@ -250,7 +250,7 @@ const GMNarrativeTab: React.FC<GMNarrativeTabProps> = ({
             <button
               onClick={distributeRolesRandomly}
               disabled={isDistributing || nonGMPlayers.length === 0}
-              className="flex items-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all"
+              className="flex items-center gap-2 px-2 py-2 bg-neutral-600 hover:bg-neutral-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all"
             >
               <Shuffle
                 size={18}
@@ -258,15 +258,7 @@ const GMNarrativeTab: React.FC<GMNarrativeTabProps> = ({
               />
               Repartir Aleatoriamente
             </button>
-            <button
-              onClick={() => setGamePhase(1)}
-              disabled={!checkMinRolesAssigned()}
-              className="flex items-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-lg shadow-green-900/30"
-            >
-              <Play size={18} fill="currentColor" />
-              Iniciar Fase 1
-            </button>
-          </div>
+            </div>
         </div>
       )}
 

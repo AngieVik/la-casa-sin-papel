@@ -37,7 +37,7 @@ const UIGameMaster: React.FC = () => {
       )}
 
       {/* --- GM Header / Tabs --- */}
-      <div className="flex md:flex-row items-center justify-between  gap-2 border-b border-neutral-800 pb-2">
+      <div className="flex md:flex-row items-center justify-between  gap-2">
         <div>
           <h2 className="text-xl md:text-2xl font-black text-white  tracking-tighter flex items-center gap-2">
             GM

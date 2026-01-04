@@ -24,7 +24,7 @@ import { GameMetadata, GameModule, Player, GameId } from "../types";
 const ROLE_DESCRIPTIONS: Record<string, string> = {
   Aldeano:
     "Habitante sin poderes. Tu único objetivo es detectar y linchar a los hombres lobo.",
-    Vidente:
+  Vidente:
     "Cada noche eliges a un jugador para conocer su verdadera identidad secreta.",
   Bruja:
     "Tienes 2 pociones de un solo uso: una para revivir a un muerto y otra para matar a alguien.",
@@ -38,14 +38,12 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
     "Tu voto vale doble en caso de empate. Si mueres, debes nombrar a tu sucesor.",
   Protector:
     "Cada noche proteges a alguien del ataque de los lobos. No puedes repetir.",
-  Ankú:
-    "Tras morir, puedes votar en dos linchamientos más y hablar con los muertos.",
+  Ankú: "Tras morir, puedes votar en dos linchamientos más y hablar con los muertos.",
   Chamán:
     "Hablas con los muertos por la noche y les obligas a seguir jugando como vivos.",
   Noctambulo:
     "Eliges con quién dormir cada noche. Esa persona pierde sus poderes esa noche y tú sabes quién es.",
-  Titiritero: 
-    "Puedes suplantar a un Lobo por la noche (actuando con ellos).",
+  Titiritero: "Puedes suplantar a un Lobo por la noche (actuando con ellos).",
   Farmacéutica:
     "Tienes poción de anular poderes y poción de vida (esta última solo funciona si se la das a la Bruja).",
   Astrónomo:
@@ -74,8 +72,7 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
     "Si mueres, el lobo a tu izquierda morirá al día siguiente por la herida de tu espada.",
   CabezaDeTurco:
     "Si hay empate en la votación, mueres tú. Al morir, decides quién puede votar al día siguiente.",
-  DomadorDeOsos: 
-    "Si tienes un lobo al lado, el narrador gruñe por la mañana.",
+  DomadorDeOsos: "Si tienes un lobo al lado, el narrador gruñe por la mañana.",
   JuezTartamudo:
     "Una vez por partida, puedes ordenar un segundo linchamiento inmediato tras el primero.",
   TontoDeLaAldea:
@@ -271,8 +268,8 @@ const GMView: React.FC = () => {
   const renderPhase0 = () => (
     <div className="space-y-4 animate-in fade-in">
       {/* Display de contador y último rol seleccionado */}
-      <div className="bg-neutral-900/80 border border-neutral-700 rounded-xl p-4">
-        <div className="flex items-center justify-between gap-4">
+      <div className="p-2">
+        <div className="flex items-center justify-between">
           {/* Display de dos líneas a la izquierda */}
           <div className="flex-1 min-w-0">
             {lastSelectedRole ? (
@@ -305,10 +302,10 @@ const GMView: React.FC = () => {
                 selectedRoles.length < room.players.length ||
                 checklist["p0_reparto"]
               }
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all ${
+              className={`flex items-center gap-1 px-2 py-2 rounded-lg font-bold text-sm transition-all ${
                 checklist["p0_reparto"]
                   ? "bg-green-600/20 text-green-500 border border-green-600"
-                  : "bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-30"
+                  : "bg-neutral-600 text-white hover:bg-neutral-500 disabled:opacity-50"
               }`}
             >
               <svg
@@ -333,33 +330,23 @@ const GMView: React.FC = () => {
       </div>
 
       {/* Tarjetas de roles en flexbox wrap cuadradas */}
-      <div className="flex flex-wrap gap-2 justify-center">
+      <div className="flex flex-wrap gap-1 justify-center">
         {Object.keys(ROLE_DESCRIPTIONS).map((role) => (
           <button
             key={role}
             onClick={() => toggleRoleSelection(role)}
-            className={`aspect-square min-w-[90px] w-[90px] md:w-[100px] p-1 rounded-xl border-2 transition-all flex items-center justify-center text-center ${
+            className={`aspect-[2/1] min-h-[60px] min-w-[100px] w-[100px] md:w-[120px] p-1 rounded-xl border-2 transition-all flex items-center justify-center text-center ${
               selectedRoles.includes(role)
                 ? "bg-red-800 border-neutral-900/10 text-white font-bold shadow-lg shadow-black-500/30"
                 : "bg-neutral-400 border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:bg-neutral-400/80"
             }`}
           >
             <span className="font-miltonian font-bold text-black text-xs md:text-sm leading-tight break-words">
-              {role.replace(/([A-Z])/g, ' $1').trim()}
+              {role.replace(/([A-Z])/g, " $1").trim()}
             </span>
           </button>
         ))}
       </div>
-
-      <button
-        onClick={() => {
-          setGamePhase(1);
-          gmUpdateGlobalState("Fase 1: Día 1");
-        }}
-        className="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl flex items-center justify-center gap-2"
-      >
-        <Sun /> Amanecer (Ir a Fase 1)
-      </button>
     </div>
   );
 
@@ -459,17 +446,6 @@ const GMView: React.FC = () => {
           ))}
         </div>
       </div>
-
-      <button
-        onClick={() => {
-          const nextPhase = phase + 1;
-          setGamePhase(nextPhase); // Ir a Noche
-          gmUpdateGlobalState(`Fase ${nextPhase}: Noche`);
-        }}
-        className="w-full py-3 bg-indigo-900 hover:bg-indigo-800 text-white font-bold rounded-xl flex items-center justify-center gap-2"
-      >
-        <Moon /> Caer la Noche (Ir a Fase {phase + 1})
-      </button>
     </div>
   );
 
@@ -599,19 +575,6 @@ const GMView: React.FC = () => {
           </div>
         </div>
       </div>
-
-      <button
-        onClick={() => {
-          const nextPhase = phase + 1;
-          setGamePhase(nextPhase); // Ir a Día
-          gmUpdateGlobalState(
-            `Fase ${nextPhase}: Día ${Math.floor(nextPhase / 2) + 1}`
-          );
-        }}
-        className="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl flex items-center justify-center gap-2"
-      >
-        <Sun /> Amanecer (Resolver Muertes)
-      </button>
     </div>
   );
 
@@ -668,12 +631,12 @@ export const LosHombresLoboMetadata: GameMetadata = {
   title: "Los Hombres Lobo de Campohermoso",
   description:
     "El clásico juego de engaño, roles ocultos y linchamientos en tu pueblo.",
-  minRoles: ["Narrador"], // El resto se reparte dinámicamente
+  minRoles: ["HombreLobo", "Aldeano"], 
   specificData: {
     roles: Object.keys(ROLE_DESCRIPTIONS),
     playerStates: ["Enamorado", "Protegido", "Silenciado", "Maldito"],
     publicStates: ["Vivo", "Muerto", "Alguacil"],
-    globalStates: ["Fase 0", "Día", "Noche"],
+    globalStates: ["Día", "Noche"],
   },
   icon: (props) => <Moon {...props} />, // O un icono de Lobo si tienes
   themeColor: "bg-red-900",
