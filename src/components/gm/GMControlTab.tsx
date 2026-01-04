@@ -120,7 +120,7 @@ const GMControlTab: React.FC<GMControlTabProps> = ({
       </div>
 
       {/* Contenedor Flexbox con wrapping y ajuste de ancho basado en el contenido */}
-      <div className="flex flex-wrap gap-3 w-full justify-start items-stretch">
+      <div className="flex flex-wrap gap-2 w-full justify-start items-stretch">
         {nonGMPlayers.map((player) => (
           <button
             key={player.id}
@@ -159,7 +159,7 @@ const GMControlTab: React.FC<GMControlTabProps> = ({
                 </div>
 
                 {/* Rol del Jugador */}
-                <div className="text-xs text-neutral-500 font-mono uppercase tracking-widest whitespace-nowrap overflow-hidden text-ellipsis">
+                <div className="text-xs text-neutral-500 font-mono tracking-widest whitespace-nowrap overflow-hidden text-ellipsis">
                   {(player.roles || []).length > 0
                     ? (player.roles || []).join(", ")
                     : "Sin Rol"}

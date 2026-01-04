@@ -8,16 +8,17 @@ import {
   Play,
   Square,
   RotateCcw,
-  Trash2,
 } from "lucide-react";
 import ConfirmModal from "./ConfirmModal";
 import ModalWrapper from "./ModalWrapper";
 import GMControlTab from "./gm/GMControlTab";
 import GMNarrativeTab from "./gm/GMNarrativeTab";
 import GMActionsTab from "./gm/GMActionsTab";
-import GameContainer from "./gm/GameContainer";
 import PlayerEditModal from "./gm/PlayerEditModal";
 import StateManagementModals from "./gm/StateManagementModals";
+import GMAuditModal from "./gm/GMAuditModal";
+import GlobalMessageModal from "./gm/GlobalMessageModal";
+import GlobalDivineVoiceModal from "./gm/GlobalDivineVoiceModal";
 import { useGMInterface } from "../hooks/useGMInterface";
 import { getGameById } from "../constants/games";
 
@@ -36,14 +37,12 @@ const UIGameMaster: React.FC = () => {
       )}
 
       {/* --- GM Header / Tabs --- */}
-      <div className="flex md:flex-row items-center justify-between mb-6 gap-2 border-b border-neutral-800 pb-4">
+      <div className="flex md:flex-row items-center justify-between  gap-2 border-b border-neutral-800 pb-2">
         <div>
           <h2 className="text-xl md:text-2xl font-black text-white  tracking-tighter flex items-center gap-2">
-            <Settings className="text-red-500 animate-spin-slow" size={24} />
-            Interfaz GM
+            GM
           </h2>
-          <p className="text-neutral-500 text-xs font-mono tracking-widest uppercase">
-            Estado:{" "}
+          <p className="text-neutral-500 text-xs font-mono tracking-widest">
             <span
               className={
                 gm.status === "playing" ? "text-green-500" : "text-yellow-500"
@@ -138,36 +137,34 @@ const UIGameMaster: React.FC = () => {
                   gm.gmEndGame();
                 }
               }}
-              className="bg-red-600 hover:bg-red-500 text-white font-bold px-2 py-1 rounded-xl flex items-center gap-2 transition-all transform active:scale-95 shadow-[0_0_15px_rgba(220,38,38,0.3)]"
+              className="hover:text-red-800 gap-2 transition-colors"
             >
-              <Square size={20} fill="currentColor" />
+              <Square size={30} fill="currentColor" />
             </button>
           )}
 
           <button
             onClick={() => gm.setShowResetConfirm(true)}
-            className="bg-neutral-800 hover:bg-neutral-700 text-yellow-500 border border-neutral-700 p-2 rounded-xl transition-colors"
+            className="hover:text-red-800 gap-2 transition-colors"
             title="Refrescar sesión"
           >
-            <RotateCcw size={20} />
+            <RotateCcw size={30} />
           </button>
 
           <button
             onClick={gm.handleTogglePower}
-            className={`border p-2 rounded-xl transition-colors ${
-              gm.isRoomClosed
-                ? "bg-green-900/50 hover:bg-green-800 text-green-400 border-green-700"
-                : "bg-neutral-800 hover:bg-neutral-700 text-neutral-400 border-neutral-700"
+            className={`hover:text-red-800 gap-2 transition-colors ${
+              gm.isRoomClosed ? " hover:text-red-800 " : " hover:text-red-800 "
             }`}
             title={gm.isRoomClosed ? "Encender Sala" : "Cerrar Sala"}
           >
-            <Power size={20} />
+            <Power size={30} />
           </button>
         </div>
       </div>
 
       {/* --- Tab Content --- */}
-      <div className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6 min-h-[500px] shadow-2xl relative overflow-hidden">
+      <div className="relative overflow-hidden">
         {/* TAB: CONTROL (Players) */}
         {gm.activeTab === "control" && (
           <GMControlTab
@@ -321,195 +318,34 @@ const UIGameMaster: React.FC = () => {
       />
 
       {/* GLOBAL MESSAGE MODAL */}
-      {gm.showGlobalMessageModal && (
-        <ModalWrapper
-          title="Mensaje Global"
-          onClose={() => {
-            gm.setShowGlobalMessageModal(false);
-            gm.setGlobalMessageText("");
-          }}
-        >
-          <div className="space-y-4">
-            <p className="text-neutral-400 text-sm">
-              Envía un mensaje que verán todos los jugadores:
-            </p>
-            <input
-              type="text"
-              value={gm.globalMessageText}
-              onChange={(e) => gm.setGlobalMessageText(e.target.value)}
-              placeholder="Mensaje para todos..."
-              className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white"
-              autoFocus
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={gm.handleSendGlobalMessage}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg font-bold"
-              >
-                Enviar a Todos
-              </button>
-              <button
-                onClick={() => {
-                  gm.setShowGlobalMessageModal(false);
-                  gm.setGlobalMessageText("");
-                }}
-                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white py-2 rounded-lg font-bold"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </ModalWrapper>
-      )}
+      <GlobalMessageModal
+        isOpen={gm.showGlobalMessageModal}
+        onClose={() => gm.setShowGlobalMessageModal(false)}
+        message={gm.globalMessageText}
+        setMessage={gm.setGlobalMessageText}
+        onSend={gm.handleSendGlobalMessage}
+      />
 
       {/* GM AUDIT MODAL */}
-      {gm.showAuditModal && (
-        <ModalWrapper
-          title="Auditoría de Sesiones"
-          onClose={() => gm.setShowAuditModal(false)}
-        >
-          <div className="space-y-4">
-            <div className="bg-yellow-900/20 border border-yellow-700/50 p-3 rounded-lg text-yellow-500 text-xs mb-4 flex items-center gap-2">
-              <Zap size={14} />
-              <p>
-                Usa 'Limpiar' solo para eliminar sesiones fantasma o duplicadas
-                manualmente.
-              </p>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="text-neutral-500 text-xs border-b border-neutral-700">
-                    <th className="p-2">Nickname</th>
-                    <th className="p-2">UID</th>
-                    <th className="p-2 text-center">Estado</th>
-                    <th className="p-2 text-right">Acción</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm">
-                  {gm.players.map((player) => {
-                    const isDuplicate =
-                      gm.players.filter((p) => p.nickname === player.nickname)
-                        .length > 1;
-                    return (
-                      <tr
-                        key={player.id}
-                        className={`border-b border-neutral-800 ${
-                          isDuplicate ? "bg-red-900/10" : ""
-                        }`}
-                      >
-                        <td className="p-2 font-bold text-white">
-                          {player.nickname}
-                          {isDuplicate && (
-                            <span className="ml-2 text-[10px] text-red-500 bg-red-900/20 px-1 rounded border border-red-900/50">
-                              DUPLICADO
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-2 font-mono text-[10px] text-neutral-500">
-                          {player.id}
-                        </td>
-                        <td className="p-2 text-center">
-                          <div
-                            className={`w-2 h-2 rounded-full mx-auto ${
-                              player.status === "online"
-                                ? "bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]"
-                                : "bg-neutral-700"
-                            }`}
-                            title={player.status}
-                          />
-                        </td>
-                        <td className="p-2 text-right">
-                          <button
-                            onClick={() => {
-                              gm.setPlayerToDelete({
-                                id: player.id,
-                                nickname: player.nickname,
-                              });
-                              gm.setShowAuditDeleteConfirm(true);
-                            }}
-                            className="p-1.5 bg-red-900/20 hover:bg-red-900/40 text-red-500 rounded transition-colors"
-                            title="Limpiar Sesión"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex justify-end pt-4">
-              <button
-                onClick={() => gm.setShowAuditModal(false)}
-                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-sm font-bold"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </ModalWrapper>
-      )}
+      <GMAuditModal
+        isOpen={gm.showAuditModal}
+        onClose={() => gm.setShowAuditModal(false)}
+        players={gm.players}
+        playerToDelete={gm.playerToDelete}
+        setPlayerToDelete={gm.setPlayerToDelete}
+        showDeleteConfirm={gm.showAuditDeleteConfirm}
+        setShowDeleteConfirm={gm.setShowAuditDeleteConfirm}
+        onConfirmDelete={gm.handleAuditDelete}
+      />
 
       {/* GLOBAL DIVINE VOICE MODAL */}
-      {gm.showGlobalDivineVoiceModal && (
-        <ModalWrapper
-          title="Voz Divina Global"
-          onClose={() => {
-            gm.setShowGlobalDivineVoiceModal(false);
-            gm.setGlobalDivineVoiceText("");
-          }}
-        >
-          <div className="space-y-4">
-            <p className="text-neutral-400 text-sm">
-              Envía un mensaje divino a todos los jugadores:
-            </p>
-            <input
-              type="text"
-              value={gm.globalDivineVoiceText}
-              onChange={(e) => gm.setGlobalDivineVoiceText(e.target.value)}
-              placeholder="Mensaje divino para todos..."
-              className="w-full bg-neutral-900 border border-neutral-700 rounded-lg px-3 py-2 text-white"
-              autoFocus
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={gm.handleSendDivineVoice}
-                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg font-bold"
-              >
-                Enviar Voz Divina
-              </button>
-              <button
-                onClick={() => {
-                  gm.setShowGlobalDivineVoiceModal(false);
-                  gm.setGlobalDivineVoiceText("");
-                }}
-                className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white py-2 rounded-lg font-bold"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </ModalWrapper>
-      )}
-      {/* AUDIT DELETE CONFIRMATION MODAL */}
-      {gm.showAuditDeleteConfirm && gm.playerToDelete && (
-        <ConfirmModal
-          title="Eliminar Sesión"
-          message={`¿Seguro que quieres eliminar la sesión de ${gm.playerToDelete.nickname}? Esta acción es irreversible.`}
-          confirmText="Eliminar"
-          cancelText="Cancelar"
-          variant="danger"
-          onConfirm={gm.handleAuditDelete}
-          onCancel={() => {
-            gm.setShowAuditDeleteConfirm(false);
-            gm.setPlayerToDelete(null);
-          }}
-        />
-      )}
+      <GlobalDivineVoiceModal
+        isOpen={gm.showGlobalDivineVoiceModal}
+        onClose={() => gm.setShowGlobalDivineVoiceModal(false)}
+        message={gm.globalDivineVoiceText}
+        setMessage={gm.setGlobalDivineVoiceText}
+        onSend={gm.handleSendDivineVoice}
+      />
     </div>
   );
 };

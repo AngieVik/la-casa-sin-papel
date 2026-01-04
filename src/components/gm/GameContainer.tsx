@@ -28,21 +28,21 @@ const GameContainer: React.FC = () => {
 
   if (!gameModule) {
     return (
-      <div className="text-center py-12 text-neutral-500">
+      <div className="text-center text-neutral-500">
         No hay juego seleccionado
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-300">
+    <div className="animate-in slide-in-from-bottom-2 duration-300">
       {/* Barra de Control de Fases */}
-      <div className="flex items-center justify-between p-3 bg-neutral-950 border border-neutral-800 rounded-xl">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-neutral-500 uppercase tracking-wider">
-            Fase actual:
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          <span className="text-2xl font-bold text-neutral-500 tracking-wider">
+            Fase actual
           </span>
-          <span className="text-xl font-black text-white bg-neutral-800 px-3 py-1 rounded-lg">
+          <span className="text-2xl font-black text-white">
             {gamePhase}
           </span>
         </div>
@@ -51,23 +51,23 @@ const GameContainer: React.FC = () => {
           <button
             onClick={handlePrevPhase}
             disabled={gamePhase === 0}
-            className="p-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            className="bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
             title="Fase anterior"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={40} />
           </button>
           <button
             onClick={handleNextPhase}
-            className="p-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors"
+            className="bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors"
             title="Siguiente fase"
           >
-            <ChevronRight size={20} />
+            <ChevronRight size={40} />
           </button>
         </div>
       </div>
 
       {/* Renderiza el componente del juego */}
-      <div className="p-4 bg-neutral-900/50 border border-neutral-800 rounded-xl">
+      <div className="rounded-xl">
         <React.Suspense
           fallback={
             <div className="flex items-center justify-center h-64 text-neutral-500 animate-pulse">

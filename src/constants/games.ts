@@ -1,8 +1,12 @@
 import React from "react";
 import { GameModule } from "../types";
 import { testGameMeta } from "../games/TestGame";
+import { LosHombresLoboMetadata } from "../games/LosHombresLoboDeCampohermoso";
 
 const TestGame = React.lazy(() => import("../games/TestGame"));
+const LosHombresLobo = React.lazy(
+  () => import("../games/LosHombresLoboDeCampohermoso")
+);
 
 /**
  * GAMES - Registro de juegos disponibles
@@ -12,6 +16,10 @@ export const GAMES: GameModule[] = [
   {
     ...testGameMeta,
     Component: TestGame,
+  },
+  {
+    ...LosHombresLoboMetadata,
+    Component: LosHombresLobo,
   },
 ];
 

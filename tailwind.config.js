@@ -12,6 +12,9 @@ export default {
       animation: {
         marquee: "marquee 25s linear infinite",
       },
+      fontFamily: {
+        miltonian: ["Miltonian", "serif"],
+      },
     },
   },
   plugins: [],

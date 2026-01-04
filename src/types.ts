@@ -15,7 +15,7 @@ export interface GameSpecificData {
   globalStates: string[]; // Ej: ["Niebla"]
 }
 
-export type GameId = "test_game"; // Añadir aquí nuevos IDs de juegos
+export type GameId = "test_game" | "hombres_lobo_campohermoso"; // Añadir aquí nuevos IDs de juegos
 
 export interface GameMetadata {
   id: GameId;
